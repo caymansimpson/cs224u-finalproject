@@ -16,15 +16,8 @@ import NaiveBayes as nb
 import time
 from os import listdir
 from os.path import isfile, join
-
-# Passage(filename) <= creates questions and stores them in member
-# passage.text = ""
-# passage.questions = []
-
-# Question()
-# Question.text = "question prompt text"
-# question.answers = ["answer #0", "answer #1"]
-# question.correctAnswer = int_of_correct_answer <= corresponds with index of answers
+from Passage import *
+from Question import *
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
@@ -60,12 +53,23 @@ def getRecursiveFiles(path, filter_fn=lambda x: True):
     paths = [path]
     files = [];
     while(len(paths) > 0):
+        path = paths[0] if paths[0][-1] != "/" else paths[0][:-1];
         children = [f for f in listdir(paths[0])];
         for child in children:
-            if not isfile(join(path,f)) and "." not in f: paths.append(child);
-            elif isfile(join(path,f)): files.append(child);
+            if not isfile(join(path,child)) and "." not in f: paths.append(join(path,child));
+            elif isfile(join(path,child)): files.append(join(path,child));
             paths = paths[1:]; #remove te path we just looked at
     return filter(filter_fn, files);
+
+
+# Passage(filename) <= creates questions and stores them in member
+# passage.text = ""
+# passage.questions = []
+
+# Question()
+# Question.text = "question prompt text"
+# question.answers = ["answer #0", "answer #1"]
+# question.correctAnswer = int_of_correct_answer <= corresponds with index of answers
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
@@ -73,9 +77,15 @@ def getRecursiveFiles(path, filter_fn=lambda x: True):
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
+def loadPassages(path):
+    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x);
+    return [Passage(filename) for filename in files];
 
 def main(f, o):
-    pass;
+    passages = loadPassages(f);
+
+    for passage in passages:
+        print passage
 
 
 # =====================================================================================================================================================
@@ -95,12 +105,12 @@ if __name__ == "__main__":
     start = time.time();
 
     v = reduce(lambda a,d: a or d== "-v", args, False);
-    if(v): print "All modules successfully loaded..."
+    if(v): print "All modules successfully loaded... in " + str(int(time.time() - start)) +  " seconds!"
 
     f = "";
     o = "";
 
-    for i, arg in args:
+    for i, arg in enumerate(args):
         if(arg == "-f"): # extract the filename argument
             f = args[i+1];
         elif(arg == "-o"): # extract the output filename argument

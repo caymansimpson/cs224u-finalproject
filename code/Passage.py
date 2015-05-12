@@ -6,13 +6,19 @@
 
 from Question import *
 
-class Question:
+class Passage:
     def __init__(self, filename):
-        """Question initialization."""
+        """Passage initialization."""
         self.text = "";
         self.questions = [];
 
         with open(filename, "rb") as f:
             arr = f.read().split("###");
-            self.text = arr[0].trim();
+            self.text = arr[0].strip();
             self.questions = map(lambda qtext: Question(qtext), arr[1:]);
+
+    def __str__(self):
+    	string = "";
+    	for question in self.questions:
+    		string += str(question);
+        return "Text:\n" + self.text + "\n\nQuestions:\n" + string

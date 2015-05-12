@@ -8,7 +8,10 @@ class Question:
 
     def __init__(self, string):
         """Question initialization."""
-        arr = string.split("\n");
-        self.text = arr[0].trim();
-        self.answers = map(lambda x: x.trim(), arr[1:-1]);
+        arr = filter(lambda x: len(x) > 0, string.split("\n"));
+        self.text = arr[0].strip();
+        self.answers = map(lambda x: x.strip(), arr[1:-1]);
         self.correctAnswer = int(arr[-1]);
+
+    def __str__(self):
+        return "Question: " + self.text + "\n" + str(self.answers) + "\nCorrect Answer: " + str(self.correctAnswer)
