@@ -14,7 +14,17 @@ from nltk.tag.stanford import POSTagger
 from distributedwordreps import *
 import NaiveBayes as nb
 import time
+from os import listdir
+from os.path import isfile, join
 
+# Passage(filename) <= creates questions and stores them in member
+# passage.text = ""
+# passage.questions = []
+
+# Question()
+# Question.text = "question prompt text"
+# question.answers = ["answer #0", "answer #1"]
+# question.correctAnswer = int_of_correct_answer <= corresponds with index of answers
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
@@ -47,7 +57,8 @@ def printSuccess(message):
 #   First param: String of initial directory to start searching
 #   Second param (optional): A filter function that filters the files found. Default returns all files.
 def getRecursiveFiles(path, filter_fn=lambda x: True):
-    paths = [path], files = [];
+    paths = [path]
+    files = [];
     while(len(paths) > 0):
         children = [f for f in listdir(paths[0])];
         for child in children:
@@ -91,9 +102,9 @@ if __name__ == "__main__":
 
     for i, arg in args:
         if(arg == "-f"): # extract the filename argument
-            f = sys.argv[i+1];
+            f = args[i+1];
         elif(arg == "-o"): # extract the output filename argument
-            o = sys.argv[i+1];
+            o = args[i+1];
 
     main(f, o);
 
