@@ -1,7 +1,4 @@
-###
-
 The pioneers of the teaching of science imagined that its introduction into education would remove the conventionality, artificiality, and backward-lookingness which were characteristic of classical studies, but they were gravely disappointed. 
-
 So, too, in their time had the humanists thought that the study of the classical authors in the original would banish at once the dull pedantry and superstition of mediaeval scholasticism.
 The professional schoolmaster was a match for both of them, and has almost managed to make the understanding of chemical reactions as dull and as dogmatic an affair as the reading of Virgil's Aeneid.
 The chief claim for the use of science in education is that it teaches a child something about the actual universe in which he is living, in making him acquainted with the results of scientific discovery, and at the same time teaches him how to think logically and inductively by studying scientific method.
@@ -12,7 +9,7 @@ Actually, for the convenience of teachers and the requirements of the examinatio
 The way in which educated people respond to such quackeries as spiritualism or astrology, not to say more dangerous ones such as racial theories or currency myths, shows that fifty years of education in the method of science in Britain or Germany has produced no visible effect whatever.
 The only way of learning the method of science is the long and bitter way of personal experience, and, until the educational or social systems are altered to make this possible, the best we can expect is the production of a minority of people who are able to acquire some of the techniques of science and a still smaller minority who are able to use and develop them.
 ###
-The word ‘palpably’ (line 24) most nearly means
+The word ‘palpably’ (line 7) most nearly means
 empirically 
 obviously 
 tentatively 
