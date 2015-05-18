@@ -38,8 +38,8 @@ def readFile(filename):
 # Throws an error.
 #   First param: String that contains error/notification
 #   Second param: Whether to halt program execution or not.
-def throwError(message, shouldExit):
-    print '\033[93m' + str(message) + '\033[0m\n';
+def error(msg, shouldExit):
+    print '\033[91m' + msg + '\033[0m';
     if(shouldExit): sys.exit();
 
 # Prints a success (in green).
@@ -52,14 +52,17 @@ def printSuccess(message):
 def getRecursiveFiles(path, filter_fn=lambda x: True):
     paths = [path]
     files = [];
-    while(len(paths) > 0):
-        path = paths[0] if paths[0][-1] != "/" else paths[0][:-1];
-        children = [f for f in listdir(paths[0])];
-        for child in children:
-            if not isfile(join(path,child)) and "." not in f: paths.append(join(path,child));
-            elif isfile(join(path,child)): files.append(join(path,child));
-            paths = paths[1:]; #remove te path we just looked at
-    return filter(filter_fn, files);
+    try:
+        while(len(paths) > 0):
+            path = paths[0] if paths[0][-1] != "/" else paths[0][:-1];
+            children = [f for f in listdir(paths[0])];
+            for child in children:
+                if not isfile(join(path,child)) and "." not in f: paths.append(join(path,child));
+                elif isfile(join(path,child)): files.append(join(path,child));
+                paths = paths[1:]; #remove te path we just looked at
+        return filter(filter_fn, files);
+    except:
+        error(path + " is not a directory. Exiting...", True);
 
 
 # Passage(filename) <= creates questions and stores them in member
@@ -78,14 +81,14 @@ def getRecursiveFiles(path, filter_fn=lambda x: True):
 # =====================================================================================================================================================
 
 def loadPassages(path):
-    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x);
+    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~');
     return [Passage(filename) for filename in files];
 
 def main(f, o):
     passages = loadPassages(f);
 
     for passage in passages:
-        print passage
+        print "========================================================\n", passage
 
 
 # =====================================================================================================================================================
@@ -95,7 +98,7 @@ def main(f, o):
 # =====================================================================================================================================================
 
 # Command Line Reference:
-#   Example call: python testaker.py -f "../data" -v -c column_num -o "../output.txt"
+#   Example call: python testaker.py -f "../data/passages" -v -c column_num -o "../output.txt"
 #   1) -v: if you want this program to be verbose
 #   2) -o: if you want this program to output results to a file (defaults to printing to console)
 #   3) -f: filename or path flag pointing to data (necessary)
@@ -105,7 +108,7 @@ if __name__ == "__main__":
     start = time.time();
 
     v = reduce(lambda a,d: a or d== "-v", args, False);
-    if(v): print "All modules successfully loaded... in " + str(int(time.time() - start)) +  " seconds!"
+    if(v): print "All modules successfully loaded in " + str(int(time.time() - start)) +  " seconds!"
 
     f = "";
     o = "";
@@ -115,6 +118,9 @@ if __name__ == "__main__":
             f = args[i+1];
         elif(arg == "-o"): # extract the output filename argument
             o = args[i+1];
+
+    if(f == ""):
+        error("You must use the -f flag to specify where to find that data.\n   1) -v: if you want this program to be verbose\n   2) -o: if you want this program to output results to a file (defaults to printing to console)\n   3) -f: filename or path flag pointing to data (necessary)", True)
 
     main(f, o);
 
