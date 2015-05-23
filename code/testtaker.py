@@ -10,14 +10,6 @@
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
-from nltk.tag.stanford import POSTagger
-from distributedwordreps import *
-import NaiveBayes as nb
-import time
-from os import listdir
-from os.path import isfile, join
-from Passage import *
-from Question import *
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
@@ -64,31 +56,28 @@ def getRecursiveFiles(path, filter_fn=lambda x: True):
     except:
         error(path + " is not a directory. Exiting...", True);
 
-
-# Passage(filename) <= creates questions and stores them in member
-# passage.text = ""
-# passage.questions = []
-
-# Question()
-# Question.text = "question prompt text"
-# question.answers = ["answer #0", "answer #1"]
-# question.correctAnswer = int_of_correct_answer <= corresponds with index of answers
-
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 # ================================================================== MAIN CODE BASE ===================================================================
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
+# Loads all passages in file.
 def loadPassages(path):
     files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~');
     return [Passage(filename) for filename in files];
 
-def main(f, o):
+# Main method
+def main(f, o, g, v):
+    if(v): print "Loading passages...";
     passages = loadPassages(f);
 
-    for passage in passages:
-        print "========================================================\n", passage
+    if(v): print "Loading glove vectors...";
+    glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
+
+    if(v): print "Finished loading all data!";
+
+    print glove.getVec("and");
 
 
 # =====================================================================================================================================================
@@ -102,28 +91,54 @@ def main(f, o):
 #   1) -v: if you want this program to be verbose
 #   2) -o: if you want this program to output results to a file (defaults to printing to console)
 #   3) -f: filename or path flag pointing to data (necessary)
+#   4) -g: filename for glove vectors, default "../data/glove_vectors/glove.6B.50d.txt"
 if __name__ == "__main__":
 
-    args = sys.argv[1:];
+    # Preliminary loading to get arguments
+    import sys
+    import time
+
     start = time.time();
+    args = sys.argv[1:];
 
     v = reduce(lambda a,d: a or d== "-v", args, False);
-    if(v): print "All modules successfully loaded in " + str(int(time.time() - start)) +  " seconds!"
+    if(v): print "\nImporting modules..."
 
     f = "";
     o = "";
+    g = "../data/glove_vectors/glove.6B.50d.txt";
 
+    # Get command lime arguments
     for i, arg in enumerate(args):
         if(arg == "-f"): # extract the filename argument
             f = args[i+1];
         elif(arg == "-o"): # extract the output filename argument
             o = args[i+1];
+        elif(arg == "-g"):
+            g = args[i+1];
 
+    # Report error if called the wrong way
     if(f == ""):
-        error("You must use the -f flag to specify where to find that data.\n   1) -v: if you want this program to be verbose\n   2) -o: if you want this program to output results to a file (defaults to printing to console)\n   3) -f: filename or path flag pointing to data (necessary)", True)
+        error("You must use the -f flag to specify where to find that data.\n   1) -v: if you want this program to be verbose\n   2) -o: if you want this program to output results to a file (defaults to printing to console)\n   3) -f: filename or path flag pointing to data (necessary)\n    4) -g: path to glove vector file (defaults to '../data/glove_vectors/glove.6B.50d.txt'", True)
 
-    main(f, o);
 
+    # Loading Modules
+    from nltk.tag.stanford import POSTagger
+    from distributedwordreps import *
+    import NaiveBayes as nb
+    import time
+    from os import listdir
+    from os.path import isfile, join
+    from Passage import *
+    from Question import *
+    from Glove import *
+
+    if(v): print "All modules successfully loaded in " + str(int(time.time() - start)) +  " seconds!"
+
+    # Main Method
+    main(f, o, g, v);
+
+    # Finished Testaker execution
     if(v): printSuccess("Program successfully finished and exited in " + str(int(time.time() - start)) +  " seconds!");
     sys.exit();
 
@@ -151,6 +166,23 @@ Example call of NaiveBayes:
 classifier = nb.NaiveBayes();
 nb.addExamples(["good","good","ok","bad"],["pos","pos","pos","neg"]);
 print nb.classify("good");
+
+Example call of Passages and Questions
+======================================================
+Passage(filename) <= creates questions and stores them in member
+passage.text = "passage text"
+passage.questions = [Question Object, Question Object]
+
+Question(text) <= constructor, created within Passage constructor, text automatically passed
+Question.text = "question prompt text"
+question.answers = ["answer #0", "answer #1"]
+question.correctAnswer = int_of_correct_answer <= corresponds with index of answers
+
+Example call of Glove Module
+======================================================
+glove = Glove(filename);
+print glove.getVec("and"); # <= prints out glove vector for that word, or None if word not in vocab
+print glove.getVocab(); # <= returns an array of all the words the glove vectors have
 """
 
 

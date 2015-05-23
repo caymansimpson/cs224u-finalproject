@@ -20,16 +20,20 @@ COMMAND LINE REFERENCE
 
 An example call to this program would be:
 
-	python testaker.py -f "../data" -v -o "../output.txt"
+	python testaker.py -f "../data/passages" -v -o "../output.txt"
 
 Use the -f flag to point to find the data:
 
-	python testtaker.py -f "../data"
+	python testtaker.py -f "../data/passages"
 
 
 If you want the program to be verbose, use the -v flag:
 
-	python testaker.py -f "../data" -v
+	python testaker.py -f "../data/passages" -v
+
+If you want the program to use a certain glove vector file, use the -g flag:
+
+	python testaker.py -f "../data/passages" -v -g "../data/glove_vectors/glv.60B.50D.txt"
 
 If you want the program to output the results to a file instead of printing to the console, use the -o flag and specify the file you want to write:
 
