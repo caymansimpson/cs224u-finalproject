@@ -58,9 +58,39 @@ def getRecursiveFiles(path, filter_fn=lambda x: True):
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
+# ================================================================= DISTANCE METRICS ==================================================================
+# =====================================================================================================================================================
+# =====================================================================================================================================================
+
+def kldist(p,q):
+    return reduce(lambda soFar,i: soFar + p[i]*np.log(p[i]/q[i]), xrange(len(p)), 0);
+
+def jsd(p,q):
+    p = map(lambda u: u/sum(p), p);
+    q = map(lambda v: v/sum(q), q);
+    m = .5*np.add(p,q);
+    return np.sqrt(.5*kldist(p,m) + .5*kldist(q,m))
+
+def L2(u,v):
+    return reduce(lambda soFar,i: soFar + (u[i]-v[i])*(u[i]-v[i]), range(len(u)), 0);
+
+# distributed reps has: cosine, L1 (euclidean), jaccard
+
+# =====================================================================================================================================================
+# =====================================================================================================================================================
 # ================================================================== MAIN CODE BASE ===================================================================
 # =====================================================================================================================================================
 # =====================================================================================================================================================
+
+#-1 is no guess, [(ourguess_int, gold_int)]
+def rand_baseline(passages):
+    guesses = [];
+    for passage in passages:
+        for question in passage.questions():
+            guesses.append()
+
+def nnBaseline(passages):
+    pass;
 
 # Loads all passages in file.
 def loadPassages(path):
@@ -71,6 +101,11 @@ def loadPassages(path):
 def main(f, o, g, v):
     if(v): print "Loading passages...";
     passages = loadPassages(f);
+
+    count = 0;
+    for passage in passages:
+        count += len(passage.questions);
+    print count;
 
     if(v): print "Loading glove vectors...";
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
@@ -129,6 +164,7 @@ if __name__ == "__main__":
     import time
     from os import listdir
     from os.path import isfile, join
+    import rand
     from Passage import *
     from Question import *
     from Glove import *
