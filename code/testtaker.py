@@ -117,6 +117,21 @@ def nnBaseline(passages, glove, distfunc):
             guesses.append( (ind, question.correctAnswer) );
     return guesses;
 
+def getAverageVec(words, glove):
+    targetvec = glove.getVec(words[0]);
+    if(targetvec == None): error("Glove does not have \"" + word + "\" in its vocabulary", False);
+
+    count = 0;
+    for word in words[1:]:
+        wordvec = glove.getVec(word);
+        if(wordvec != None):
+            count += 1;
+            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+            
+        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+
+    targetvec = map(lambda x: x/count, targetvec);
+    return targetvec
 
 def sentenceBaseline(passages, glove, distfunc):
     guesses = [];
@@ -134,16 +149,7 @@ def sentenceBaseline(passages, glove, distfunc):
                 error("Glove does not have \"" + sentence[0] + "\" in its vocabulary", False);
                 continue;
 
-            count = 0;
-            for word in sentence[1:]:
-                wordvec = glove.getVec(word);
-                if(wordvec != None):
-                    count += 1;
-                    targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
-                else:
-                    error("Glove does not have \"" + word + "\" in its vocabulary", False);
-
-            targetvec = map(lambda x: x/count, targetvec);
+            targetvec = getAverageVec(sentence, glove);
 
             mindist = 10e100;
             ind = -1;
@@ -181,10 +187,10 @@ def main(f, o, g, v):
     if(v): print "Finished loading all data!";
 
 
-    random_model = rand_baseline(passages);
-    random_score = score_model(random_model, verbose=True)
+    # random_model = rand_baseline(passages);
+    # random_score = score_model(random_model, verbose=True)
     # print nnBaseline(passages, glove, L2);
-    # print sentencebaseline(passages, glove, L2);
+    print sentenceBaseline(passages, glove, cosine);
 
 
 # =====================================================================================================================================================
