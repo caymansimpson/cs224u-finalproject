@@ -128,8 +128,34 @@ def nnBaseline(passages, glove, distfunc, threshold=None):
                 guesses.append( (ind, question.correctAnswer) );
     return guesses;
 
+def addVec(words, glove):
+    targetvec = glove.getVec(words[0]);
+    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary. Producing bug here.", False); # Will produce bug if first word is not in vocab
 
-def sentenceBaseline(passages, glove, distfunc):
+    for word in words[1:]:
+        wordvec = glove.getVec(word);
+        if(wordvec != None):
+            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+    return targetvec;
+
+def getAverageVec(words, glove):
+    targetvec = glove.getVec(words[0]);
+    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
+
+    count = 0;
+    for word in words[1:]:
+        wordvec = glove.getVec(word);
+        if(wordvec != None):
+            count += 1;
+            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+            
+        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+
+    targetvec = map(lambda x: x/count, targetvec);
+    return targetvec
+
+def sentenceBaseline(passages, glove, distfunc, threshold):
     guesses = [];
     for passage in passages:
         for question in passage.questions:
@@ -145,32 +171,22 @@ def sentenceBaseline(passages, glove, distfunc):
                 error("Glove does not have \"" + sentence[0] + "\" in its vocabulary", False);
                 continue;
 
-            count = 0;
-            for word in sentence[1:]:
-                wordvec = glove.getVec(word);
-                if(wordvec != None):
-                    count += 1;
-                    targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
-                else:
-                    error("Glove does not have \"" + word + "\" in its vocabulary", False);
-
-            targetvec = map(lambda x: x/count, targetvec);
+            targetvec = getAverageVec(sentence, glove);
 
             mindist = 10e100;
             ind = -1;
             for i,answer in enumerate(question.answers):
                 vec = glove.getVec(answer);
+
                 # Two word answer, adding the vector
-                if(" " in answer):
-                    w1 = glove.getVec(answer.split(" ")[0]);
-                    w2 = glove.getVec(answer.split(" ")[1]);
-                    vec = map(lambda i: w1[i] + w2[i], xrange(len(w1)));
-                # Glove does not have the answer in its vocabulary
-                elif(vec== None):
+                if(" " in answer): vec = addVec(answer.split(" "), glove);
+
+                # Glove straight up does not have the answer in its vocabulary
+                if(vec == None):
                     error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
                     continue;
 
-                if( mindist > distfunc(vec, targetvec) ):
+                if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
                     ind = i;
                     mindist = distfunc(vec, targetvec);
             guesses.append( (ind, question.correctAnswer) );
@@ -193,9 +209,10 @@ def main(f, o, g, v):
 
     # random_model = rand_baseline(passages);
     # nnBaseline_model = nnBaseline(passages, glove, cosine);
-    model = nnBaseline(passages, glove, cosine, 0.3)
+    model = sentenceBaseline(passages, glove, cosine, 0.45)
 
     score = score_model(model, verbose=True)
+
 
 
 # =====================================================================================================================================================
