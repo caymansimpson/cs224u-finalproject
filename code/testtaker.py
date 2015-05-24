@@ -122,28 +122,46 @@ def sentenceBaseline(passages, glove, distfunc):
     guesses = [];
     for passage in passages:
         for question in passage.questions:
-            targetline = re.findall("[0-9]+", question.text)[0];
+            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
+
             sentence = passage.text.split("\n")[int(targetline)];
-            sentence = ree.split("[\s,.--;:]", sentence);
+            sentence = re.split("[^A-Za-z0-9]", sentence);
             sentence = filter(lambda x: len(x) > 0, sentence);
             sentence = map(lambda x: x.strip().lower(), sentence);
 
             targetvec = glove.getVec(sentence[0]);
+            if(targetvec == None):
+                error("Glove does not have \"" + sentence[0] + "\" in its vocabulary", False);
+                continue;
+
             count = 0;
             for word in sentence[1:]:
                 wordvec = glove.getVec(word);
                 if(wordvec != None):
                     count += 1;
                     targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+                else:
+                    error("Glove does not have \"" + word + "\" in its vocabulary", False);
 
             targetvec = map(lambda x: x/count, targetvec);
 
-            mindist = 10e10;
+            mindist = 10e100;
             ind = -1;
             for i,answer in enumerate(question.answers):
-                if( mindist < distfunc(glove.getVec(answer), targetvec) ):
+                vec = glove.getVec(answer);
+                # Two word answer, adding the vector
+                if(" " in answer):
+                    w1 = glove.getVec(answer.split(" ")[0]);
+                    w2 = glove.getVec(answer.split(" ")[1]);
+                    vec = map(lambda i: w1[i] + w2[i], xrange(len(w1)));
+                # Glove does not have the answer in its vocabulary
+                elif(vec== None):
+                    error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+                    continue;
+
+                if( mindist > distfunc(vec, targetvec) ):
                     ind = i;
-                    mindist = distfunc(glove.getVec(answer), targetvec);
+                    mindist = distfunc(vec, targetvec);
             guesses.append( (ind, question.correctAnswer) );
     return guesses;
 
@@ -162,9 +180,9 @@ def main(f, o, g, v):
 
     if(v): print "Finished loading all data!";
 
-    print rand_baseline(passages);
-    print nnBaseline(passages, glove, L2);
-    print sentencebaseline(passages, glove, L2);
+    #print rand_baseline(passages);
+    #print nnBaseline(passages, glove, L2);
+    print sentenceBaseline(passages, glove, L2);
 
 
 # =====================================================================================================================================================
