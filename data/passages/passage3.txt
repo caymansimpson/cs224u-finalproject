@@ -31,11 +31,3 @@ justice
 complacency 
 composure
 4
-###
-The tone of the sentence 'New men....live' (line 15) is
-objective 
-ironic 
-derogatory 
-expository 
-ambivalent
-1
