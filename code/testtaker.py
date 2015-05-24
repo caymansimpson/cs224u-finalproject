@@ -153,9 +153,10 @@ def main(f, o, g, v):
 
     if(v): print "Finished loading all data!";
 
-    print rand_baseline(passages);
-    print nnBaseline(passages, glove, L2);
-    print sentencebaseline(passages, glove, L2);
+    random_model = rand_baseline(passages);
+    random_score = score_model(random_model, verbose=True)
+    # print nnBaseline(passages, glove, L2);
+    # print sentencebaseline(passages, glove, L2);
 
 
 # =====================================================================================================================================================
@@ -212,6 +213,7 @@ if __name__ == "__main__":
     from Passage import *
     from Question import *
     from Glove import *
+    from scoring import score_model
 
     if(v): print "All modules successfully loaded in " + str(int(time.time() - start)) +  " seconds!"
 
