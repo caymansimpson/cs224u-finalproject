@@ -86,11 +86,57 @@ def L2(u,v):
 def rand_baseline(passages):
     guesses = [];
     for passage in passages:
-        for question in passage.questions():
-            guesses.append()
+        for question in passage.questions:
+            guesses.append( (random.randint(0,4),question.correctAnswer) );
+    return guesses;
 
-def nnBaseline(passages):
-    pass;
+def nnBaseline(passages, glove, distfunc):
+    guesses = [];
+    for passage in passages:
+        for question in passage.questions:
+            print question.text
+            targetword = re.findall("[\xe2\x80\x9c\u2019\"\']+(.+?)[\xe2\x80\x9c\u2019\"\']+", question.text)[0]; # Doesnt work
+            print targetword
+            targetvec = glove.getVec(targetword);
+
+            mindist = 10e10;
+            ind = -1;
+            for i,answer in enumerate(question.answers):
+                if( mindist < distfunc(glove.getVec(answer), targetvec) ):
+                    ind = i;
+                    mindist = distfunc(glove.getVec(answer), targetvec);
+            guesses.append( (ind, question.correctAnswer) );
+    return guesses;
+
+
+def sentenceBaseline(passages, glove, distfunc):
+    guesses = [];
+    for passage in passages:
+        for question in passage.questions:
+            targetline = re.findall("[0-9]+", question.text)[0];
+            sentence = passage.text.split("\n")[int(targetline)];
+            sentence = ree.split("[\s,.--;:]", sentence);
+            sentence = filter(lambda x: len(x) > 0, sentence);
+            sentence = map(lambda x: x.strip().lower(), sentence);
+
+            targetvec = glove.getVec(sentence[0]);
+            count = 0;
+            for word in sentence[1:]:
+                wordvec = glove.getVec(word);
+                if(wordvec != None):
+                    count += 1;
+                    targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+
+            targetvec = map(lambda x: x/count, targetvec);
+
+            mindist = 10e10;
+            ind = -1;
+            for i,answer in enumerate(question.answers):
+                if( mindist < distfunc(glove.getVec(answer), targetvec) ):
+                    ind = i;
+                    mindist = distfunc(glove.getVec(answer), targetvec);
+            guesses.append( (ind, question.correctAnswer) );
+    return guesses;
 
 # Loads all passages in file.
 def loadPassages(path):
@@ -102,17 +148,14 @@ def main(f, o, g, v):
     if(v): print "Loading passages...";
     passages = loadPassages(f);
 
-    count = 0;
-    for passage in passages:
-        count += len(passage.questions);
-    print count;
-
     if(v): print "Loading glove vectors...";
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
 
     if(v): print "Finished loading all data!";
 
-    print glove.getVec("and");
+    print rand_baseline(passages);
+    print nnBaseline(passages, glove, L2);
+    print sentencebaseline(passages, glove, L2);
 
 
 # =====================================================================================================================================================
@@ -164,7 +207,8 @@ if __name__ == "__main__":
     import time
     from os import listdir
     from os.path import isfile, join
-    import rand
+    import random
+    import re
     from Passage import *
     from Question import *
     from Glove import *
