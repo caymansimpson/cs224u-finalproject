@@ -74,6 +74,9 @@ def jsd(p,q):
 def L2(u,v):
     return reduce(lambda soFar,i: soFar + (u[i]-v[i])*(u[i]-v[i]), range(len(u)), 0);
 
+def cosine(u, v):
+    return scipy.spatial.distance.cosine(u, v)
+
 # distributed reps has: cosine, L1 (euclidean), jaccard
 
 # =====================================================================================================================================================
@@ -117,9 +120,20 @@ def nnBaseline(passages, glove, distfunc):
             guesses.append( (ind, question.correctAnswer) );
     return guesses;
 
+def addVec(words, glove):
+    targetvec = glove.getVec(words[0]);
+    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary. Producing bug here.", False); # Will produce bug if first word is not in vocab
+
+    for word in words[1:]:
+        wordvec = glove.getVec(word);
+        if(wordvec != None):
+            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+    return targetvec;
+
 def getAverageVec(words, glove):
     targetvec = glove.getVec(words[0]);
-    if(targetvec == None): error("Glove does not have \"" + word + "\" in its vocabulary", False);
+    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
 
     count = 0;
     for word in words[1:]:
@@ -133,7 +147,7 @@ def getAverageVec(words, glove):
     targetvec = map(lambda x: x/count, targetvec);
     return targetvec
 
-def sentenceBaseline(passages, glove, distfunc):
+def sentenceBaseline(passages, glove, distfunc, threshold):
     guesses = [];
     for passage in passages:
         for question in passage.questions:
@@ -155,17 +169,16 @@ def sentenceBaseline(passages, glove, distfunc):
             ind = -1;
             for i,answer in enumerate(question.answers):
                 vec = glove.getVec(answer);
+
                 # Two word answer, adding the vector
-                if(" " in answer):
-                    w1 = glove.getVec(answer.split(" ")[0]);
-                    w2 = glove.getVec(answer.split(" ")[1]);
-                    vec = map(lambda i: w1[i] + w2[i], xrange(len(w1)));
-                # Glove does not have the answer in its vocabulary
-                elif(vec== None):
+                if(" " in answer): vec = addVec(answer.split(" "), glove);
+
+                # Glove straight up does not have the answer in its vocabulary
+                if(vec == None):
                     error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
                     continue;
 
-                if( mindist > distfunc(vec, targetvec) ):
+                if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
                     ind = i;
                     mindist = distfunc(vec, targetvec);
             guesses.append( (ind, question.correctAnswer) );
@@ -186,11 +199,17 @@ def main(f, o, g, v):
 
     if(v): print "Finished loading all data!";
 
+    # random_model = rand_baseline(passages);
+    nnBaseline_model = nnBaseline(passages, glove, cosine);
 
     # random_model = rand_baseline(passages);
     # random_score = score_model(random_model, verbose=True)
     # print nnBaseline(passages, glove, L2);
-    print sentenceBaseline(passages, glove, cosine);
+    sentencebl_model = sentenceBaseline(passages, glove, cosine, 0);
+
+    for i in range(100):
+        print i/100.0
+        score = score_model(sentenceBaseline(passages, glove, cosine, i/100.0), verbose=True)
 
 
 # =====================================================================================================================================================
@@ -236,6 +255,7 @@ if __name__ == "__main__":
 
 
     # Loading Modules
+    import scipy
     from nltk.tag.stanford import POSTagger
     from distributedwordreps import *
     import NaiveBayes as nb
