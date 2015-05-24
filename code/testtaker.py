@@ -93,7 +93,7 @@ def rand_baseline(passages):
             guesses.append( (random.randint(0,4),question.correctAnswer) );
     return guesses;
 
-def nnBaseline(passages, glove, distfunc):
+def nnBaseline(passages, glove, distfunc, threshold=None):
     guesses = [];
     for passage in passages:
         for question in passage.questions:
@@ -115,9 +115,17 @@ def nnBaseline(passages, glove, distfunc):
                     continue;
 
                 if( mindist > distfunc(glove.getVec(answer), targetvec) ):
+                    print "Distance between " + str(answer) + " and " + str(targetword) + " is: "
+                    print str(distfunc(glove.getVec(answer), targetvec));
                     ind = i;
                     mindist = distfunc(glove.getVec(answer), targetvec);
-            guesses.append( (ind, question.correctAnswer) );
+            if threshold is not None:
+                if mindist <= threshold:
+                    guesses.append( (ind, question.correctAnswer) );
+                else:
+                    guesses.append( (-1, question.correctAnswer) );
+            else:
+                guesses.append( (ind, question.correctAnswer) );
     return guesses;
 
 
@@ -184,9 +192,10 @@ def main(f, o, g, v):
     if(v): print "Finished loading all data!";
 
     # random_model = rand_baseline(passages);
-    nnBaseline_model = nnBaseline(passages, glove, cosine);
+    # nnBaseline_model = nnBaseline(passages, glove, cosine);
+    model = nnBaseline(passages, glove, cosine, 0.3)
 
-    score = score_model(nnBaseline_model, verbose=True)
+    score = score_model(model, verbose=True)
 
 
 # =====================================================================================================================================================
