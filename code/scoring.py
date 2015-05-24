@@ -29,9 +29,11 @@ def score_model(guess_answer_pairs, verbose=False):
     scaled_score = scale_score(unscaled_score, len(guess_answer_pairs))
     score = SCORE_CONVERSION_TABLE[scaled_score]
     if(verbose):
-        print "Unscaled (Raw) Score: " + str(unscaled_score) + "/" + str(len(guess_answer_pairs))
-        print "Scaled Score: " + str(scaled_score) + "/" + str(len(SCORE_CONVERSION_TABLE)-3)
-        print "Converted SAT Score: " + str(score) + "/800"
+        print "SAT SCORE: " + str(score)
+        print "\tBreakdown:"
+        print "\tUnscaled (Raw) Score: " + str(unscaled_score) + "/" + str(len(guess_answer_pairs))
+        print "\tScaled Score: " + str(scaled_score) + "/" + str(len(SCORE_CONVERSION_TABLE)-3)
+        print "\tConverted SAT Score: " + str(score) + "/800"
     return score
 
 def scale_score(unscaled_score, num_questions):

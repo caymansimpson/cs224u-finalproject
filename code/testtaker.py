@@ -74,6 +74,9 @@ def jsd(p,q):
 def L2(u,v):
     return reduce(lambda soFar,i: soFar + (u[i]-v[i])*(u[i]-v[i]), range(len(u)), 0);
 
+def cosine(u, v):
+    return scipy.spatial.distance.cosine(u, v)
+
 # distributed reps has: cosine, L1 (euclidean), jaccard
 
 # =====================================================================================================================================================
@@ -162,9 +165,10 @@ def main(f, o, g, v):
 
     if(v): print "Finished loading all data!";
 
-    random_model = rand_baseline(passages);
-    random_score = score_model(random_model, verbose=True)
-    # print nnBaseline(passages, glove, L2);
+    # random_model = rand_baseline(passages);
+    nnBaseline_model = nnBaseline(passages, glove, cosine);
+
+    score = score_model(nnBaseline_model, verbose=True)
     # print sentencebaseline(passages, glove, L2);
 
 
@@ -211,6 +215,7 @@ if __name__ == "__main__":
 
 
     # Loading Modules
+    import scipy
     from nltk.tag.stanford import POSTagger
     from distributedwordreps import *
     import NaiveBayes as nb
