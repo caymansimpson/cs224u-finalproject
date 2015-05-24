@@ -94,15 +94,24 @@ def nnBaseline(passages, glove, distfunc):
     guesses = [];
     for passage in passages:
         for question in passage.questions:
-            print question.text
-            targetword = re.findall("[\xe2\x80\x9c\u2019\"\']+(.+?)[\xe2\x80\x9c\u2019\"\']+", question.text)[0]; # Doesnt work
-            print targetword
+            targetword = re.findall("[\xe2\x80\x9c\u2019\"\']([A-Za-z\s]+)[\xe2\x80\x9c\u2019\"\']", question.text)[0]; # Doesnt work
             targetvec = glove.getVec(targetword);
 
-            mindist = 10e10;
+            # Glove does not have the target word in its vocabulary
+            if(targetvec == None):
+                error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
+                continue;
+
+            mindist = 10e100;
             ind = -1;
             for i,answer in enumerate(question.answers):
-                if( mindist < distfunc(glove.getVec(answer), targetvec) ):
+
+                # Glove does not have the answer in its vocabulary
+                if(glove.getVec(answer) == None):
+                    error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+                    continue;
+
+                if( mindist > distfunc(glove.getVec(answer), targetvec) ):
                     ind = i;
                     mindist = distfunc(glove.getVec(answer), targetvec);
             guesses.append( (ind, question.correctAnswer) );
