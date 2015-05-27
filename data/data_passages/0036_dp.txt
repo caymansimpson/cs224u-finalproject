@@ -1,0 +1,64 @@
+Modern technology can do some pretty incredible things. It’s possible, with current technological
+capabilities, to transmit digital information over long distances using coding and decoding processes
+without losing the contents of the original information. The best part is we don’t have to do
+anything besidessend the message and wait for it to be received.   
+   
+Consider, for instance, the cellular phone. It wasn’t until the early 1980s that this mobile
+variation on the standard telephone was even available for people to use. Now, it seems like
+everyone has a cellphone, sending and receiving information in speedy ways invisible to the
+human eye.  
+There’s so much going on below the surface of what we can see when we use our cellphones.
+One difference between a mobile phone and a traditional landline telephone is you can move
+the cellphone just about anywhere geographically and still use it to talk to other phone users.
+No matter how far away you are from someone you call, you can usually still understand each
+other’s voices over the phone, thanks to radio waves and something called a cellular network.  
+It took many evolutions in phone technology to get where we are today, but the current
+cellphone wirelessly transmits information by connecting to a cellular network. Mobile phone
+operators provide these cellular networks, which function with the help of cellphone towers,
+and then calls are made over what is known as a radio link. Through this process, information—
+in this case, voice input—is broken down and reassembled over the radio link, so the person on
+the other end instantaneously hears what is said.
+In other words, as you speak into the phone, your voice is converted into an electrical signal,
+transmitted in the form of a radio wave by these towers, and then converted back into the
+sound of your voice by the phone on the receiving end. All this happens in the blink of an eye
+while you chat over the phone without any distortion.   
+The process of transmitting digital information is not exclusive to telephones. Computers are
+another instrument that can receive, decode and convert information, though typically this
+information is not a person’s voice, but written content.  
+We may take for granted the ease with which we can pass along information with computers
+and the Internet, but many forces are hard at work processing information to make computers
+easier for us to use and communication more reliable.  
+The first computer showed up around 1941, but it was much more limited in its capabilities
+than computers now. In fact, computers are everywhere—sometimes they are so small we do
+not think of them as computers at all, though they serve the same function as the computers
+we have at home, the office or school.  
+Much like cellular telephones, computers were actually first used to transmit sensitive
+information across geographical spaces by the military at a point when government officials
+worried it would be possible to knock out a country’s entire telephone grid.  
+Computer engineers began finding ways to link their computers together in order to share
+information among them. This linking began with just a couple of computers and grew to the
+millions which connect regularly today. Ultimately, that’s how what we know as the Internet
+was developed.  
+Wireless computer networking is also similar to cellular phone use in that computers use the
+same networks our mobile phones use.  
+While you speak into the telephone using your voice, you typically insert data into your
+computer by typing on the keyboard. You may decide to share information through an email
+or access information on a website by typing in or visiting what is known as a hyperlink.  
+When you use the Internet to share and access information, you connect to the relevant
+network. You can send a message from your computer to another computer anywhere in the
+world and it will arrive almost immediately, going through many different networks in the
+process.
+Still, the information you send does not travel in a single piece as it might through the
+standard mail service; instead, it is broken down into smaller digital information. As with a
+cellphone, the information you send is fragmented into tiny pieces and then reconstructed
+once it’s reached its destination. Along with your message comes other information, for
+instance about ordering, or how the message should be restructured to make sense to the
+reader. Your message will also include more basic data about where it came from and where it
+is supposed to go.  
+Computers and the Internet require many high‐tech and complicated pieces to run properly,
+but something known as a router is a key instrument that keeps information being sent from
+one computer to another going along the correct pathway. The Internet also relies on
+telephone wires and satellite links for wireless information sharing.
+It’s important to note that for the Internet to work as it does, many companies have to agree
+to work with one another. The Internet is really a collection of networks working together
+toward a common goal of allowing information to be shared.
