@@ -250,8 +250,8 @@ def getSumVec(words, glove):
 
 import operator
 
-#returns a list of the five words in sentence with the highest tfidf scores
-def findTopFive(sentence, tfidf, allWords):
+#returns a list of the top x words in sentence with the highest tfidf scores (defaults to 10)
+def findTopX(sentence, tfidf, allWords, x=10):
     d = defaultdict(float);
     for word in sentence:
         i = allWords.index(word);
@@ -264,7 +264,7 @@ def findTopFive(sentence, tfidf, allWords):
         words.append(key);
         values.append(val);
 
-    return words[-5:];
+    return words[-x:];
 
 #finds the average of each word's non-zero tfidf values
 def computeTFIDFArray(tfidf_mat):
@@ -302,15 +302,15 @@ def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
             sentence = filter(lambda x: len(x) > 0, sentence);
             sentence = map(lambda x: x.strip().lower(), sentence);
 
-            topFive = findTopFive(sentence, tfidf_array, allWords);
+            topX = findTopX(sentence, tfidf_array, allWords, 15);
 
-            targetvec = glove.getVec(topFive[0]);
+            targetvec = glove.getVec(topX[0]);
             if(targetvec == None):
-                error("Glove does not have \"" + topFive[0] + "\" in its vocabulary", False);
+                error("Glove does not have \"" + topX[0] + "\" in its vocabulary", False);
                 continue;
 
 
-            targetvec = getSumVec(topFive, glove);
+            targetvec = getSumVec(topX, glove);
 
             mindist = 10e100;
             ind = -1;
