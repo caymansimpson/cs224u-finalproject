@@ -248,8 +248,8 @@ def getSumVec(words, glove):
 
 import operator
 
-#returns a list of the five words in sentence with the highest tfidf scores
-def findTopFive(sentence, tfidf, allWords):
+#returns a list of the top x words in sentence with the highest tfidf scores (defaults to 10)
+def findTopX(sentence, tfidf, allWords, x=10):
     d = defaultdict(float);
     for word in sentence:
         i = allWords.index(word);
@@ -262,7 +262,7 @@ def findTopFive(sentence, tfidf, allWords):
         words.append(key);
         values.append(val);
 
-    return words[-5:];
+    return words[-x:];
 
 #finds the average of each word's non-zero tfidf values
 def computeTFIDFArray(tfidf_mat):
@@ -288,8 +288,8 @@ def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
     data_passages = loadPassages(data_passages_file);
     freqMatrix, allWords = createWordDocMatrix(passages, data_passages);
 
-    dis_mat = disambiguate(mat=freqMatrix, rownames=allWords);
-    print neighbors(mat=dis_mat[0], word='fair_0', rownames=dis_mat[1]);
+    # dis_mat = disambiguate(mat=freqMatrix, rownames=allWords);
+    # print neighbors(mat=dis_mat[0], word='fair_0', rownames=dis_mat[1]);
     
 
 
@@ -305,15 +305,28 @@ def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
             sentence = filter(lambda x: len(x) > 0, sentence);
             sentence = map(lambda x: x.strip().lower(), sentence);
 
-            topFive = findTopFive(sentence, tfidf_array, allWords);
+            topX = findTopX(sentence, tfidf_array, allWords, 15);
 
-            targetvec = glove.getVec(topFive[0]);
+
+            # print "===== QUESTION ====="
+            # print question
+            # print "===================="
+            # print "===== SENTENCE ====="
+            # print sentence
+            # print "===================="
+            # print "===== TOP FIVE ====="
+            # print topFive
+            # print "===================="
+            # raw_input()
+
+
+            targetvec = glove.getVec(topX[0]);
             if(targetvec == None):
-                error("Glove does not have \"" + topFive[0] + "\" in its vocabulary", False);
+                error("Glove does not have \"" + topX[0] + "\" in its vocabulary", False);
                 continue;
 
 
-            targetvec = getSumVec(topFive, glove);
+            targetvec = getSumVec(topX, glove);
 
             mindist = 10e100;
             ind = -1;
@@ -353,8 +366,8 @@ def main(f, o, g, v):
 
     # random_model = rand_baseline(passages);
     #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    #model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
-    model = sentenceBaseline(passages, glove, cosine)
+    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+    # model = sentenceBaseline(passages, glove, cosine)
     score = score_model(model, verbose=True)
 
 
