@@ -121,6 +121,7 @@ def nnBaseline(passages, glove, distfunc, threshold=None):
                 if( mindist > distfunc(glove.getVec(answer), targetvec) ):
                     ind = i;
                     mindist = distfunc(glove.getVec(answer), targetvec);
+            
             if threshold is not None:
                 if mindist <= threshold:
                     guesses.append( (ind, question.correctAnswer) );
@@ -283,7 +284,7 @@ def computeTFIDFArray(tfidf_mat):
     return tfidf_array;
 
 #uses additional data passages to compute tfidf
-def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
+def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold=None):
     guesses = [];
     data_passages = loadPassages(data_passages_file);
     freqMatrix, allWords = createWordDocMatrix(passages, data_passages);
@@ -307,18 +308,16 @@ def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
 
             topX = findTopX(sentence, tfidf_array, allWords, 15);
 
-
             # print "===== QUESTION ====="
             # print question
             # print "===================="
             # print "===== SENTENCE ====="
             # print sentence
             # print "===================="
-            # print "===== TOP FIVE ====="
-            # print topFive
+            # print "===== TOP X ====="
+            # print topX
             # print "===================="
             # raw_input()
-
 
             targetvec = glove.getVec(topX[0]);
             if(targetvec == None):
@@ -341,10 +340,18 @@ def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
                     error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
                     continue;
 
-                if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
+                if( distfunc(vec, targetvec) < mindist):
                     ind = i;
                     mindist = distfunc(vec, targetvec);
-            guesses.append( (ind, question.correctAnswer) );
+
+            if threshold is not None:
+                if mindist <= threshold:
+                    guesses.append( (ind, question.correctAnswer) );
+                else:
+                    guesses.append( (-1, question.correctAnswer) );
+            else:
+                guesses.append( (ind, question.correctAnswer) );
+
     return guesses;
 
 
@@ -366,7 +373,7 @@ def main(f, o, g, v):
 
     # random_model = rand_baseline(passages);
     #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.5)
     # model = sentenceBaseline(passages, glove, cosine)
     score = score_model(model, verbose=True)
 
