@@ -350,16 +350,13 @@ def main(f, o, g, v):
 
     if(v): print "Finished loading all data!";
 
-<<<<<<< HEAD
+
     # random_model = rand_baseline(passages);
     #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
-
+    #model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+    model = sentenceBaseline(passages, glove, cosine)
     score = score_model(model, verbose=True)
 
-
-=======
->>>>>>> 9294d7aa3db5991d8ef6226f595bedb26a28f21f
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
