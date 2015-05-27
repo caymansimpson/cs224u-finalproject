@@ -157,8 +157,7 @@ def getAverageVec(words, glove):
     targetvec = map(lambda x: x/count, targetvec);
     return targetvec
 
-def sentenceBaseline(passages, glove, distfunc, threshold=None):
-    threshold = 1 if threshold == None else threshold;
+def sentenceBaseline(passages, glove, distfunc=cosine, threshold=1):
     guesses = [];
     for passage in passages:
         for question in passage.questions:
@@ -350,16 +349,14 @@ def main(f, o, g, v):
 
     if(v): print "Finished loading all data!";
 
-<<<<<<< HEAD
     # random_model = rand_baseline(passages);
     #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+    # model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
 
-    score = score_model(model, verbose=True)
+    # score = score_model(model, verbose=True)
 
-
-=======
->>>>>>> 9294d7aa3db5991d8ef6226f595bedb26a28f21f
+    m = sentenceBaseline(passages,glove)
+    score = score_model(m, verbose=True)
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
