@@ -17,6 +17,10 @@
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
+# Outputs array for visualization in mathematica
+def mathematicatize(array):
+    return str(array).replace("[","{").replace("]","}").replace("(","{").replace(")","}");
+
 # A command line progress bar that accepts an integer from 1-100
 def update_progress(progress):
     sys.stdout.write('\r');
@@ -115,8 +119,6 @@ def nnBaseline(passages, glove, distfunc, threshold=None):
                     continue;
 
                 if( mindist > distfunc(glove.getVec(answer), targetvec) ):
-                    print "Distance between " + str(answer) + " and " + str(targetword) + " is: "
-                    print str(distfunc(glove.getVec(answer), targetvec));
                     ind = i;
                     mindist = distfunc(glove.getVec(answer), targetvec);
             if threshold is not None:
@@ -155,7 +157,8 @@ def getAverageVec(words, glove):
     targetvec = map(lambda x: x/count, targetvec);
     return targetvec
 
-def sentenceBaseline(passages, glove, distfunc, threshold):
+def sentenceBaseline(passages, glove, distfunc, threshold=None):
+    threshold = 1 if threshold == None else threshold;
     guesses = [];
     for passage in passages:
         for question in passage.questions:
@@ -206,13 +209,6 @@ def main(f, o, g, v):
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
 
     if(v): print "Finished loading all data!";
-
-    # random_model = rand_baseline(passages);
-    # nnBaseline_model = nnBaseline(passages, glove, cosine);
-    model = sentenceBaseline(passages, glove, cosine, 0.45)
-
-    score = score_model(model, verbose=True)
-
 
 
 # =====================================================================================================================================================
