@@ -38,6 +38,9 @@ def error(msg, shouldExit):
     print '\033[91m' + msg + '\033[0m';
     if(shouldExit): sys.exit();
 
+def inform(msg):
+    print '\033[93m' + str(msg) + '\033[0m';
+
 # Prints a success (in green).
 def printSuccess(message):
     print '\n\033[92m' + str(message) + '\033[0m\n';
@@ -287,11 +290,6 @@ def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
     data_passages = loadPassages(data_passages_file);
     freqMatrix, allWords = createWordDocMatrix(passages, data_passages);
 
-    dis_mat = disambiguate(mat=freqMatrix, rownames=allWords);
-    print neighbors(mat=dis_mat[0], word='fair_0', rownames=dis_mat[1]);
-    
-
-
     tfidf_mat = tfidf(mat=freqMatrix)[0];
     tfidf_array = computeTFIDFArray(tfidf_mat);
 
@@ -358,6 +356,12 @@ def main(f, o, g, v):
     m = sentenceBaseline(passages,glove)
     score = score_model(m, verbose=True)
 
+    # random_model = rand_baseline(passages);
+    #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
+    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+    score = score_model(model, verbose=True)
+
+
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 # =============================================================== COMMAND LINE REFERENCE ==============================================================
@@ -375,13 +379,12 @@ if __name__ == "__main__":
     # Preliminary loading to get arguments
     import sys
     import time
-    from collections import Counter
 
     start = time.time();
     args = sys.argv[1:];
 
     v = reduce(lambda a,d: a or d== "-v", args, False);
-    if(v): print "\nImporting modules..."
+    if(v): inform("\nImporting modules...")
 
     f = "";
     o = "";
@@ -406,7 +409,7 @@ if __name__ == "__main__":
     from nltk.tag.stanford import POSTagger
     from distributedwordreps import *
     import NaiveBayes as nb
-    import time
+    from collections import Counter
     from os import listdir
     from os.path import isfile, join
     import random

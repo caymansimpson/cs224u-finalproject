@@ -1,0 +1,45 @@
+The average computer user has between 5 and 15 username/password combinations to log in to
+email accounts, social networking sites, discussion boards, news and entertainment sites, online stores,
+online banking accounts, or other websites. For people who use email or other internet applications at
+work, the number of required username/password combinations may surpass 30. Some of these
+accounts demand that you use a specific number of symbols and digits, while others require you to
+change your password every 60 days. When you add to this list the codes needed to access things like
+ATMs, home alarm systems, padlocks, or voicemail, the number of passwords becomes staggering. The
+feeling of frustration that results from maintaining a memorized list of login credentials has grown so
+prevalent that it actually has a name: password fatigue.
+Having to remember so many different passwords is irritating, but it can also be dangerous.
+Because it is virtually impossible to remember a unique password for each of these accounts, many
+people leave handwritten lists of usernames and passwords on or next to their computers. Others solve
+this problem by using the same password for every account or using extremely simple passwords. While
+these practices make it easier to remember login information, they also make it exponentially easier for
+thieves to hack into accounts.
+Single sign-on (SSO) authentication and password management software can help mitigate this
+problem, but there are drawbacks to both approaches. SSO authentication can be used for related, but
+independent software systems. With SSO, users log in once to access a variety of different applications.
+Users only need to remember one password to log in to the main system; the SSO software then
+automatically logs the user in to other accounts within the system. SSO software is typically used by large
+companies, schools, or libraries. Password management software, such as KeePass and Password Safe,
+is most often used on personal computers. These software programs—which have been built into many
+major web browsers—store passwords in a remote database and automatically “remember” users’
+passwords for a variety of sites.
+The problem with both SSO authentication and password management software is that the
+feature that makes them useful is also what makes them vulnerable. If a user loses or forgets the
+password required to log in to SSO software, the user will then lose access to all of the applications linked
+to the SSO account. Furthermore, if a hacker can crack the SSO password, he or she will then have
+access to all of the linked accounts. Users who rely on password management software are susceptible
+to the same problems, but they also incur the added threat of passwords being compromised because of
+computer theft.
+Although most websites or network systems allow users to recover or change lost passwords by
+providing email addresses or answering a prompt, this process can waste time and cause further
+frustration. What is more, recovering a forgotten password is only a temporary solution; it does not
+address the larger problem of password fatigue.
+Some computer scientists have suggested that instead of passwords, computers rely on
+biometrics. This is a method of recognizing human users based on unique traits, such as fingerprints,
+voice, or DNA. Biometric identification is currently used by some government agencies and private
+companies, including the Department of Defense and Disney World. While biometrics would certainly
+eliminate the need for people to remember passwords, the use of biometrics raises ethical questions
+concerning privacy and can also be expensive to implement.
+The problems associated with SSO, password management software, and biometrics continue to
+stimulate software engineers and computer security experts to search for the cure to password fatigue.
+Until they find the perfect solution, however, everyone will simply have to rely on the flawed password
+system currently in place.
