@@ -168,6 +168,9 @@ def disambiguate(mat=None, rownames=None, minval=0.0, mindist=20, dist_func=cosi
     # For each word, cluster the documents containing it:
     for w_index, w in enumerate(rownames):
         doc_indices = np.array([j for j in range(mat.shape[1]) if mat[w_index,j] > minval])
+
+        print doc_indices
+
         clust = cluster(mat, doc_indices) 
         for doc_index, c_index in clust:
             w_sense = "%s_%s" % (w, c_index)

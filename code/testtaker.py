@@ -192,6 +192,146 @@ def sentenceBaseline(passages, glove, distfunc, threshold):
             guesses.append( (ind, question.correctAnswer) );
     return guesses;
 
+#returns a matrix of word-document frequencies
+def createWordDocMatrix(passages, data_passages):
+    allWords = []; #to hold all answer words and words contained in all target senteces
+    for passage in passages:
+        for question in passage.questions:
+            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
+
+            sentence = passage.text.split("\n")[int(targetline)];
+            sentence = re.split("[^A-Za-z0-9]", sentence);
+            sentence = filter(lambda x: len(x) > 0, sentence);
+            sentence = map(lambda x: x.strip().lower(), sentence);
+
+            for word in sentence:
+                if word not in allWords:
+                    allWords.append(word);
+
+            for a in question.answers:
+                if a not in allWords:
+                    allWords.append(a);
+
+
+    matrix = np.zeros((len(allWords), len(data_passages)));
+    for i,dp in enumerate(data_passages):
+        words = [];
+        words = re.split("[^A-Za-z0-9]", dp.text);
+        words = filter(lambda x: len(x) > 0, words);
+        words = map(lambda x: x.strip().lower(), words);
+        wordCounts = Counter(words);
+
+        for j,w in enumerate(allWords):
+            if w in words:
+                matrix[j][i] = wordCounts[w];
+            
+    return matrix, allWords
+
+#computes the sum of the glove vectors of all elements in words
+def getSumVec(words, glove):
+    targetvec = glove.getVec(words[0]);
+    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
+
+    count = 0;
+    for word in words[1:]:
+        wordvec = glove.getVec(word);
+        if(wordvec != None):
+            count += 1;
+            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
+            
+        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+
+    return targetvec
+
+import operator
+
+#returns a list of the five words in sentence with the highest tfidf scores
+def findTopFive(sentence, tfidf, allWords):
+    d = defaultdict(float);
+    for word in sentence:
+        i = allWords.index(word);
+        d[word] = tfidf[i] ;
+    sorted_d = sorted(d.items(), key=operator.itemgetter(1));
+
+    words = [];
+    values = [];
+    for key,val in sorted_d:
+        words.append(key);
+        values.append(val);
+
+    return words[-5:];
+
+#finds the average of each word's non-zero tfidf values
+def computeTFIDFArray(tfidf_mat):
+    tfidf_array = [];
+    for i,row in enumerate(tfidf_mat):
+        count = 0.0;
+        rowSum = 0.0;
+        for val in row:
+            if val > 0.0:
+                count += 1.0;
+                rowSum += val;
+
+        if count == 0.0:
+            tfidf_array.append(0.0)
+        else:
+            tfidf_array.append(rowSum/count);
+
+    return tfidf_array;
+
+#uses additional data passages to compute tfidf
+def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold):
+    guesses = [];
+    data_passages = loadPassages(data_passages_file);
+    freqMatrix, allWords = createWordDocMatrix(passages, data_passages);
+
+    dis_mat = disambiguate(mat=freqMatrix, rownames=allWords);
+    print neighbors(mat=dis_mat[0], word='fair_0', rownames=dis_mat[1]);
+    
+
+
+    tfidf_mat = tfidf(mat=freqMatrix)[0];
+    tfidf_array = computeTFIDFArray(tfidf_mat);
+
+    for passage in passages:
+        for question in passage.questions:
+            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
+
+            sentence = passage.text.split("\n")[int(targetline)];
+            sentence = re.split("[^A-Za-z0-9]", sentence);
+            sentence = filter(lambda x: len(x) > 0, sentence);
+            sentence = map(lambda x: x.strip().lower(), sentence);
+
+            topFive = findTopFive(sentence, tfidf_array, allWords);
+
+            targetvec = glove.getVec(topFive[0]);
+            if(targetvec == None):
+                error("Glove does not have \"" + topFive[0] + "\" in its vocabulary", False);
+                continue;
+
+
+            targetvec = getSumVec(topFive, glove);
+
+            mindist = 10e100;
+            ind = -1;
+            for i,answer in enumerate(question.answers):
+                vec = glove.getVec(answer);
+
+                # Two word answer, adding the vector
+                if(" " in answer): vec = addVec(answer.split(" "), glove);
+
+                # Glove straight up does not have the answer in its vocabulary
+                if(vec == None):
+                    error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+                    continue;
+
+                if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
+                    ind = i;
+                    mindist = distfunc(vec, targetvec);
+            guesses.append( (ind, question.correctAnswer) );
+    return guesses;
+
+
 # Loads all passages in file.
 def loadPassages(path):
     files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~');
@@ -208,8 +348,8 @@ def main(f, o, g, v):
     if(v): print "Finished loading all data!";
 
     # random_model = rand_baseline(passages);
-    # nnBaseline_model = nnBaseline(passages, glove, cosine);
-    model = sentenceBaseline(passages, glove, cosine, 0.45)
+    #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
+    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
 
     score = score_model(model, verbose=True)
 
@@ -232,6 +372,7 @@ if __name__ == "__main__":
     # Preliminary loading to get arguments
     import sys
     import time
+    from collections import Counter
 
     start = time.time();
     args = sys.argv[1:];
