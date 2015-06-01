@@ -7,6 +7,7 @@ import numpy as np
 import csv
 
 class Glove:
+    
     def __init__(self, filename, delimiter = ",", header=True, quoting=csv.QUOTE_MINIMAL):
         
         self.filename = filename;
