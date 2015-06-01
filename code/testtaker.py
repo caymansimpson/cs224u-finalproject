@@ -372,9 +372,9 @@ def main(f, o, g, v):
 
 
     # random_model = rand_baseline(passages);
-    #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.5)
-    # model = sentenceBaseline(passages, glove, cosine)
+    model = nnBaseline(passages, glove, L2);
+    # model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.5)
+    # model = sentenceBaseline(passages, glove, cosine, 0.45)
     score = score_model(model, verbose=True)
 
 

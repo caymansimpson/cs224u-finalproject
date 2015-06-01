@@ -18,9 +18,11 @@ SCORE_CONVERSION_TABLE = dict([(67, 800), (31, 500), (66, 800), (30, 500),
                                (33, 520), (32, 510)])
 
 def score_model(guess_answer_pairs, verbose=False):
+    num_correct = 0
     unscaled_score = 0.0
     for guess, answer in guess_answer_pairs:
         if guess == answer:
+            num_correct += 1
             unscaled_score += 1.0
         elif guess == -1:
             unscaled_score += 0.0
@@ -31,6 +33,7 @@ def score_model(guess_answer_pairs, verbose=False):
     if(verbose):
         print "SAT SCORE: " + str(score)
         print "\tBreakdown:"
+        print "\tNumber of Correct Answers: " + str(num_correct) + "/" + str(len(guess_answer_pairs))
         print "\tUnscaled (Raw) Score: " + str(unscaled_score) + "/" + str(len(guess_answer_pairs))
         print "\tScaled Score: " + str(scaled_score) + "/" + str(len(SCORE_CONVERSION_TABLE)-3)
         print "\tConverted SAT Score: " + str(score) + "/800"
