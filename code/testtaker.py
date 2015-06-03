@@ -126,7 +126,7 @@ def getAverageVec(words, glove):
 
 #returns a matrix of word-document frequencies
 def createWordDocMatrix(passages, data_passages):
-    allWords = set(); #to hold all answer words and words contained in all target senteces
+    allWords = set(); # to hold all answer words and words contained in all target senteces
     for passage in passages:
         for question in passage.questions:
             targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
@@ -197,6 +197,27 @@ def getGrams(filename="../data/data_passages/norvig.txt"):
 
     return unigramCounts, bigramCounts, trigramCounts
 
+# Finds the best answer given a target vector, answers, a distance function and a threshold
+# Returns -1 if none of the answers fall within the threshold
+# Returns None if an answer has a word we don't understand (the question is illegible);
+def findBestVector(targetvec, answers, glove, distfunc, threshold):
+    ind, mindist = -1, 10e100;
+    for i,answer in enumerate(answers):
+        vec = glove.getVec(answer);
+
+        # Two word answer, adding the vector
+        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
+
+        # Glove does not have the answer in its vocabulary
+        if(vec == None):
+            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            return None;
+
+        if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold ):
+            ind, mindist = i, distfunc(vec, targetvec);
+
+    return answers[ind];
+
 #####################################################################################################################
 ###################################################### MODELS #######################################################
 #####################################################################################################################
@@ -217,22 +238,7 @@ def nearestNeighborModel(targetword, answers, glove, distfunc=cosine, threshold=
         error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
         return None;
 
-    ind, mindist = -1, 10e100;
-    for i,answer in enumerate(answers):
-        vec = glove.getVec(answer);
-
-        # Two word answer, adding the vector
-        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
-
-        # Glove does not have the answer in its vocabulary
-        if(vec == None):
-            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-            return None;
-
-        elif( mindist > distfunc(vec, targetvec) and distfunc(vec, targetvec) < threshold):
-            ind, mindist = i, distfunc(vec, targetvec);
-
-    return answers[ind];
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
 # Sentence is an array of words
 # Returns answer word by averaging the sentence passed in.
@@ -242,21 +248,8 @@ def sentenceModel(sentence, answers, glove, distfunc=cosine, threshold=1):
     targetvec = getAverageVec(sentence, glove);
     ind, mindist = -1, 10e100;
 
-    for i,answer in enumerate(answers):
-        vec = glove.getVec(answer);
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
-        # Two word answer, adding the vector
-        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
-
-        # Glove straight up does not have the answer in its vocabulary, skip this questions
-        if(vec == None):
-            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-            return None; 
-
-        elif( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
-            ind, mindist = i, distfunc(vec, targetvec);
-
-    return answers[ind];
 
 # Sentence is an array of words
 # Returns a chosen answer based on pre-computed tfidf values
@@ -266,22 +259,8 @@ def tfidfModel(sentence, answers, tfidf_array, allWords, glove, distfunc=cosine,
     topX = findTopX(sentence, tfidf_array, allWords, 15);
     targetvec = getSumVec(topX, glove);
 
-    ind, mindist = -1, 10e100;
-    for i,answer in enumerate(answers):
-        vec = glove.getVec(answer);
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
-        # Two word answer, adding the vector
-        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
-
-        # Glove straight up does not have the answer in its vocabulary
-        if(vec == None):
-            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-            return None;
-
-        elif( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold ):
-            ind, mindist = i, distfunc(vec, targetvec);
-
-    return answers[ind];
 
 # Sentence is an array of words
 # Returns a chosen answer based on pre-computed tfidf values
@@ -310,22 +289,8 @@ def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove,
         return -1;
 
     targetvec = glove.getVec(prediction);
-    ind, mindist = -1, 10e100;
-    for i,answer in enumerate(answers):
-        vec = glove.getVec(answer);
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
-        # Two word answer, adding the vector
-        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
-
-        # Glove straight up does not have the answer in its vocabulary
-        if(vec == None):
-            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-            return None;
-
-        if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold ):
-            ind, mindist = i, distfunc(vec, targetvec);
-
-    return answers[ind];
 
 
 # Loads all passages in file.
