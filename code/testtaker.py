@@ -92,154 +92,29 @@ def cosine(u, v):
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
-#-1 is no guess, [(ourguess_int, gold_int)]
-def rand_baseline(passages):
-    guesses = [];
-    for passage in passages:
-        for question in passage.questions:
-            guesses.append( (random.randint(0,4),question.correctAnswer) );
-    return guesses;
-
-def nnBaseline(passages, glove, distfunc, threshold=None):
-    guesses = [];
-    for passage in passages:
-        for question in passage.questions:
-            targetword = re.findall("[\xe2\x80\x9c\u2019\"\']([A-Za-z\s]+)[\xe2\x80\x9c\u2019\"\']", question.text)[0]; # Doesnt work
-            targetvec = glove.getVec(targetword);
-
-            # Glove does not have the target word in its vocabulary
-            if(targetvec == None):
-                error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
-                continue;
-
-            mindist = 10e100;
-            ind = -1;
-            for i,answer in enumerate(question.answers):
-
-                # Glove does not have the answer in its vocabulary
-                if(glove.getVec(answer) == None):
-                    error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-                    continue;
-
-                if( mindist > distfunc(glove.getVec(answer), targetvec) ):
-                    ind = i;
-                    mindist = distfunc(glove.getVec(answer), targetvec);
-            
-            if threshold is not None:
-                if mindist <= threshold:
-                    guesses.append( (ind, question.correctAnswer) );
-                else:
-                    guesses.append( (-1, question.correctAnswer) );
-            else:
-                guesses.append( (ind, question.correctAnswer) );
-    return guesses;
-
-def addVec(words, glove):
-    targetvec = glove.getVec(words[0]);
-    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary. Producing bug here.", False); # Will produce bug if first word is not in vocab
-
-    for word in words[1:]:
-        wordvec = glove.getVec(word);
-        if(wordvec != None):
-            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
-        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
-    return targetvec;
-
-def getAverageVec(words, glove):
-    targetvec = glove.getVec(words[0]);
-    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
-
-    count = 0;
-    for word in words[1:]:
-        wordvec = glove.getVec(word);
-        if(wordvec != None):
-            count += 1;
-            targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
-            
-        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
-
-    targetvec = map(lambda x: x/count, targetvec);
-    return targetvec
-
-def sentenceBaseline(passages, glove, distfunc=cosine, threshold=1):
-    guesses = [];
-    for passage in passages:
-        for question in passage.questions:
-            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
-
-            sentence = passage.text.split("\n")[int(targetline)];
-            sentence = re.split("[^A-Za-z0-9]", sentence);
-            sentence = filter(lambda x: len(x) > 0, sentence);
-            sentence = map(lambda x: x.strip().lower(), sentence);
-
-            targetvec = glove.getVec(sentence[0]);
-            if(targetvec == None):
-                error("Glove does not have \"" + sentence[0] + "\" in its vocabulary", False);
-                continue;
-
-            targetvec = getAverageVec(sentence, glove);
-
-            mindist = 10e100;
-            ind = -1;
-            for i,answer in enumerate(question.answers):
-                vec = glove.getVec(answer);
-
-                # Two word answer, adding the vector
-                if(" " in answer): vec = addVec(answer.split(" "), glove);
-
-                # Glove straight up does not have the answer in its vocabulary
-                if(vec == None):
-                    error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-                    continue;
-
-                if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
-                    ind = i;
-                    mindist = distfunc(vec, targetvec);
-            guesses.append( (ind, question.correctAnswer) );
-    return guesses;
-
-#returns a matrix of word-document frequencies
-def createWordDocMatrix(passages, data_passages):
-    allWords = []; #to hold all answer words and words contained in all target senteces
-    for passage in passages:
-        for question in passage.questions:
-            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
-
-            sentence = passage.text.split("\n")[int(targetline)];
-            sentence = re.split("[^A-Za-z0-9]", sentence);
-            sentence = filter(lambda x: len(x) > 0, sentence);
-            sentence = map(lambda x: x.strip().lower(), sentence);
-
-            for word in sentence:
-                if word not in allWords:
-                    allWords.append(word);
-
-            for a in question.answers:
-                if a not in allWords:
-                    allWords.append(a);
-
-
-    matrix = np.zeros((len(allWords), len(data_passages)));
-    for i,dp in enumerate(data_passages):
-        words = [];
-        words = re.split("[^A-Za-z0-9]", dp.text);
-        words = filter(lambda x: len(x) > 0, words);
-        words = map(lambda x: x.strip().lower(), words);
-        wordCounts = Counter(words);
-
-        for j,w in enumerate(allWords):
-            if w in words:
-                matrix[j][i] = wordCounts[w];
-            
-    return matrix, allWords
-
-#computes the sum of the glove vectors of all elements in words
+# Computes the sum of the glove vectors of all elements in words
 def getSumVec(words, glove):
     targetvec = glove.getVec(words[0]);
     if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
 
-    count = 0;
     for word in words[1:]:
+        wordvec = glove.getVec(word);
+        if(wordvec != None): targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));  
+        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+
+    return targetvec
+
+# Computes the average of the glove vectors of all elements in words
+def getAverageVec(words, glove):
+    start = 0;
+    targetvec = glove.getVec(words[start]);
+    while(targetvec == None):
+        error("Glove does not have \"" + words[start] + "\" in its vocabulary", False);
+        start += 1;
+        targetvec = glove.getVec(words[start]);
+
+    count = 0;
+    for word in words[start:]:
         wordvec = glove.getVec(word);
         if(wordvec != None):
             count += 1;
@@ -247,103 +122,215 @@ def getSumVec(words, glove):
             
         else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
 
-    return targetvec
+    return map(lambda x: x/count, targetvec);
 
-import operator
+#returns a matrix of word-document frequencies
+def createWordDocMatrix(passages, data_passages):
+    allWords = set(); #to hold all answer words and words contained in all target senteces
+    for passage in passages:
+        for question in passage.questions:
+            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
+
+            sentence = passage.text.split("\n")[int(targetline)];
+            sentence = re.split("[^A-Za-z0-9]", sentence);
+            sentence = filter(lambda x: len(x) > 0, sentence);
+            sentence = map(lambda x: x.strip().lower(), sentence);
+
+            allWords |= set(sentence + question.answers);
+
+    allWords = list(allWords);
+
+    matrix = np.zeros((len(allWords), len(data_passages)));
+    for i,dp in enumerate(data_passages):
+        words = re.split("[^A-Za-z0-9]", dp.text);
+        words = filter(lambda x: len(x) > 0, words);
+        words = map(lambda x: x.strip().lower(), words);
+        wordCounts = collections.Counter(words);
+
+        for j,w in enumerate(allWords):
+            if w in words: matrix[j][i] = wordCounts[w];
+            
+    return matrix, allWords
 
 #returns a list of the top x words in sentence with the highest tfidf scores (defaults to 10)
 def findTopX(sentence, tfidf, allWords, x=10):
     d = defaultdict(float);
-    for word in sentence:
-        i = allWords.index(word);
-        d[word] = tfidf[i] ;
+    for word in sentence: d[word] = tfidf[allWords.index(word)];
     sorted_d = sorted(d.items(), key=operator.itemgetter(1));
 
-    words = [];
-    values = [];
-    for key,val in sorted_d:
-        words.append(key);
-        values.append(val);
+    return [key for key,val in sorted_d][-x:];
 
-    return words[-x:];
+# Returns a tfidf array with all the associated words
+def computeTFIDFArray(passages, data_passages_file="../data/data_passages"):
+    data_passages = loadPassages(data_passages_file);
+    freqMatrix, allWords = createWordDocMatrix(passages, data_passages);
 
-#finds the average of each word's non-zero tfidf values
-def computeTFIDFArray(tfidf_mat):
+    tfidf_mat = tfidf(mat=freqMatrix)[0];
     tfidf_array = [];
     for i,row in enumerate(tfidf_mat):
-        count = 0.0;
-        rowSum = 0.0;
+        count, rowSum = 0.0, 0.0;
         for val in row:
             if val > 0.0:
                 count += 1.0;
                 rowSum += val;
 
-        if count == 0.0:
-            tfidf_array.append(0.0)
-        else:
-            tfidf_array.append(rowSum/count);
+        if count == 0.0: tfidf_array.append(0.0)
+        else: tfidf_array.append(rowSum/count);
 
-    return tfidf_array;
+    return tfidf_array, allWords;
 
-#uses additional data passages to compute tfidf
-def sentenceTFIDF(passages, data_passages_file, glove, distfunc, threshold=None):
-    guesses = [];
-    data_passages = loadPassages(data_passages_file);
-    freqMatrix, allWords = createWordDocMatrix(passages, data_passages);
+# Returns (unigram_dict, bigram_dict, trigram_dict)
+def getGrams(filename="../data/data_passages/norvig.txt"):
+    unigramCounts = collections.defaultdict(lambda: 1);
+    bigramCounts = collections.defaultdict(lambda: []);
+    trigramCounts = collections.defaultdict(lambda: []);
 
-    tfidf_mat = tfidf(mat=freqMatrix)[0];
-    tfidf_array = computeTFIDFArray(tfidf_mat);
+    sentences = readFile(filename).lower().split(".");
+    sentences = map(lambda sentence: re.sub("[^A-Za-z\ \,\'\"]", "", sentence.replace("-"," ")).strip(), sentences);
+    sentences = map(lambda sentence: filter(lambda word: len(word) > 0, re.split("[^A-Za-z]", sentence)), sentences);
 
-    for passage in passages:
-        for question in passage.questions:
-            targetline = int(re.findall("[0-9]+", question.text)[0]) - 1; # Lines are 1 indexed
+    for sentence in sentences:
+        for i, word in enumerate(sentence):
+            unigramCounts[word] += 1;
+            if(i + 1 < len(sentence)): bigramCounts[word] += [sentence[i+1]]
+            if(i + 2 < len(sentence)): trigramCounts[(word, sentence[i+1])] += [sentence[i+2]];
 
-            sentence = passage.text.split("\n")[int(targetline)];
-            sentence = re.split("[^A-Za-z0-9]", sentence);
-            sentence = filter(lambda x: len(x) > 0, sentence);
-            sentence = map(lambda x: x.strip().lower(), sentence);
+    return unigramCounts, bigramCounts, trigramCounts
 
-            topX = findTopX(sentence, tfidf_array, allWords, 15);
-
-            targetvec = glove.getVec(topX[0]);
-            if(targetvec == None):
-                error("Glove does not have \"" + topX[0] + "\" in its vocabulary", False);
-                continue;
+#####################################################################################################################
+###################################################### MODELS #######################################################
+#####################################################################################################################
 
 
-            targetvec = getSumVec(topX, glove);
+# Returns answer word based on random chance, given the answers 
+def randomModel(answers):
+    return answers[random.randint(0,len(answers)) - 1];
 
-            mindist = 10e100;
-            ind = -1;
-            for i,answer in enumerate(question.answers):
-                vec = glove.getVec(answer);
+# Returns answer word by taking the nearest neighbor of the ambiguous word in the question
+# Returns None if the target (ambiguous) word or an answer is not in the glove vocab
+# Returns -1 if no answers pass the confidence threshold
+def nearestNeighborModel(targetword, answers, glove, distfunc=cosine, threshold=1):
+    targetvec = glove.getVec(targetword);
 
-                # Two word answer, adding the vector
-                if(" " in answer): vec = addVec(answer.split(" "), glove);
+    # Glove does not have the target word in its vocabulary
+    if(targetvec == None):
+        error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
+        return None;
 
-                # Glove straight up does not have the answer in its vocabulary
-                if(vec == None):
-                    error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
-                    continue;
+    ind, mindist = -1, 10e100;
+    for i,answer in enumerate(answers):
+        vec = glove.getVec(answer);
 
-                if( distfunc(vec, targetvec) < mindist):
-                    ind = i;
-                    mindist = distfunc(vec, targetvec);
+        # Two word answer, adding the vector
+        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
 
-            if threshold is not None:
-                if mindist <= threshold:
-                    guesses.append( (ind, question.correctAnswer) );
-                else:
-                    guesses.append( (-1, question.correctAnswer) );
-            else:
-                guesses.append( (ind, question.correctAnswer) );
+        # Glove does not have the answer in its vocabulary
+        if(vec == None):
+            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            return None;
 
-    return guesses;
+        elif( mindist > distfunc(vec, targetvec) and distfunc(vec, targetvec) < threshold):
+            ind, mindist = i, distfunc(vec, targetvec);
+
+    return answers[ind];
+
+# Sentence is an array of words
+# Returns answer word by averaging the sentence passed in.
+# Returns None if an answer doesn't exist in the glove vocab
+# Returns -1 if no answers pass the confidence threshold
+def sentenceModel(sentence, answers, glove, distfunc=cosine, threshold=1):
+    targetvec = getAverageVec(sentence, glove);
+    ind, mindist = -1, 10e100;
+
+    for i,answer in enumerate(answers):
+        vec = glove.getVec(answer);
+
+        # Two word answer, adding the vector
+        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
+
+        # Glove straight up does not have the answer in its vocabulary, skip this questions
+        if(vec == None):
+            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            return None; 
+
+        elif( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold):
+            ind, mindist = i, distfunc(vec, targetvec);
+
+    return answers[ind];
+
+# Sentence is an array of words
+# Returns a chosen answer based on pre-computed tfidf values
+# Returns None if an answer isn't in the glove dictionary
+# Returns -1 if an answer doesn't beat the threshold
+def tfidfModel(sentence, answers, tfidf_array, allWords, glove, distfunc=cosine, threshold=1):
+    topX = findTopX(sentence, tfidf_array, allWords, 15);
+    targetvec = getSumVec(topX, glove);
+
+    ind, mindist = -1, 10e100;
+    for i,answer in enumerate(answers):
+        vec = glove.getVec(answer);
+
+        # Two word answer, adding the vector
+        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
+
+        # Glove straight up does not have the answer in its vocabulary
+        if(vec == None):
+            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            return None;
+
+        elif( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold ):
+            ind, mindist = i, distfunc(vec, targetvec);
+
+    return answers[ind];
+
+# Sentence is an array of words
+# Returns a chosen answer based on pre-computed tfidf values
+# Returns None if an answer isn't in the glove dictionary
+# Returns -1 if an answer doesn't beat the threshold
+def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
+
+    prediction = "";
+
+    # Try trigrams
+    index = -1;
+    try:
+        index = sentence.index(targetword);
+    except:
+        return -1; # Something went wrong
+
+    if(index >= 2 and (sentence[index-2], sentence[index-1]) in trigrams):
+        prediction = max(set(trigrams[(sentence[index-2], sentence[index-1])]), key=trigrams[(sentence[index-2], sentence[index-1])].count);
+
+    # Try bigrams
+    elif(index >= 1 and sentence[index-1] in bigrams):
+        prediction = max(set(bigrams[sentence[index-1]]), key=bigrams[sentence[index-1]].count)
+
+    # TODO: Integrate disambiguate function and use most common word
+    else: # Right now: Sends signal that we don't know answer -- we don't answer the question
+        return -1;
+
+    targetvec = glove.getVec(prediction);
+    ind, mindist = -1, 10e100;
+    for i,answer in enumerate(answers):
+        vec = glove.getVec(answer);
+
+        # Two word answer, adding the vector
+        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
+
+        # Glove straight up does not have the answer in its vocabulary
+        if(vec == None):
+            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            return None;
+
+        if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold ):
+            ind, mindist = i, distfunc(vec, targetvec);
+
+    return answers[ind];
 
 
 # Loads all passages in file.
 def loadPassages(path):
-    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~');
+    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~' and "norvig" not in x.lower());
     return [Passage(filename) for filename in files];
 
 # Main method
@@ -351,25 +338,51 @@ def main(f, o, g, v):
     if(v): print "Loading passages...";
     passages = loadPassages(f);
 
-    if(v): print "Loading glove vectors...";
+    # Initialize all the external data
+    if(v): print "Loading all external data...";
+    tfidf_array, allWords = computeTFIDFArray(passages);
+    unigrams, bigrams, trigrams = getGrams();
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
 
-    if(v): print "Finished loading all data!";
+    if(v): print "Running models..."
+    # Initialize arrays to keep answers
+    rand, nn, sent, tfidf, gram = [], [], [], [], [];
 
-    # random_model = rand_baseline(passages);
-    #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    # model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+    # Loop through all the questions
+    for passage in passages:
+        for question in passage.questions:
 
-    # score = score_model(model, verbose=True)
+            # Find relevant word
+            targetword = re.findall("[\xe2\x80\x9c\u2019\"\']([A-Za-z\s]+)[\xe2\x80\x9c\u2019\"\']", question.text)[0].lower();
 
-    m = sentenceBaseline(passages,glove)
-    score = score_model(m, verbose=True)
+            # Tokenize relevant sentence
+            sentence = passage.text.split("\n")[int(re.findall("[0-9]+", question.text)[0]) - 1];
+            sentence = re.split("[^A-Za-z0-9]", sentence);
+            sentence = filter(lambda x: len(x) > 0, sentence);
+            sentence = map(lambda x: x.strip().lower(), sentence);
 
-    # random_model = rand_baseline(passages);
-    #nnBaseline_model = nnBaseline(passages, glove, cosine, 0.7);
-    model = sentenceTFIDF(passages, "../data/data_passages", glove, cosine, 0.45)
+            # Get correct answer
+            correctAnswer = question.answers[question.correctAnswer];
 
-    score = score_model(model, verbose=True)
+            # Get answers
+            randAnswer = randomModel(question.answers);
+            nnAnswer = nearestNeighborModel(targetword, question.answers, glove);
+            sentAnswer = sentenceModel(sentence, question.answers, glove);
+            tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove);
+            gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
+
+            # Guess the word if we can answer it
+            if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
+            if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
+            if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
+            if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
+            if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
+
+    score_model(rand, verbose=True, modelname="Random Model");
+    score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
+    score_model(sent, verbose=True, modelname="Sentence-Based Model");
+    score_model(tfidf, verbose=True, modelname="TFIDF Model");
+    score_model(gram, verbose=True, modelname="Gram Model");
 
 
 # =====================================================================================================================================================
@@ -411,7 +424,7 @@ if __name__ == "__main__":
 
     # Report error if called the wrong way
     if(f == ""):
-        error("You must use the -f flag to specify where to find that data.\n   1) -v: if you want this program to be verbose\n   2) -o: if you want this program to output results to a file (defaults to printing to console)\n   3) -f: filename or path flag pointing to data (necessary)\n    4) -g: path to glove vector file (defaults to '../data/glove_vectors/glove.6B.50d.txt'", True)
+        error("You must use the -f flag to specify where to find that data.\n   1) -v: if you want this program to be verbose\n   2) -o: if you want this program to output results to a file (defaults to printing to console)\n   3) -f: filename or path flag pointing to data (necessary)\n   4) -g: path to glove vector file (defaults to '../data/glove_vectors/glove.6B.50d.txt'", True)
 
 
     # Loading Modules
@@ -419,10 +432,11 @@ if __name__ == "__main__":
     from nltk.tag.stanford import POSTagger
     from distributedwordreps import *
     import NaiveBayes as nb
-    from collections import Counter
     from os import listdir
     from os.path import isfile, join
     import random
+    import collections
+    import operator
     import re
     from Passage import *
     from Question import *
