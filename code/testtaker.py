@@ -92,15 +92,38 @@ def cosine(u, v):
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
+def percentRight(arr):
+    count = 0.0;
+    right = 0.0;
+    for tup in arr:
+        if(tup[0] == -1 or tup[0] == None): continue;
+        if(tup[0] == tup[1]): right += 1;
+        count += 1;
+    return right/count;
+
+def rawScore(arr):
+    score = 0.0;
+    for tup in arr:
+        if(tup[0] == -1 or tup[0] == None): continue;
+        if(tup[0] == tup[1]): score += 1;
+        else: score -= .25;
+    return score;
+
+# Loads all passages in file.
+def loadPassages(path):
+    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~' and "norvig" not in x.lower());
+    return [Passage(filename) for filename in files];
+
 # Computes the sum of the glove vectors of all elements in words
 def getSumVec(words, glove):
     targetvec = glove.getVec(words[0]);
-    if(targetvec == None): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
+    if(targetvec == None and v): error("Glove does not have \"" + words[0] + "\" in its vocabulary", False);
 
     for word in words[1:]:
         wordvec = glove.getVec(word);
         if(wordvec != None): targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));  
-        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+        else:
+            if(v): error("Glove does not have \"" + word + "\" in its vocabulary", False);
 
     return targetvec
 
@@ -109,7 +132,7 @@ def getAverageVec(words, glove):
     start = 0;
     targetvec = glove.getVec(words[start]);
     while(targetvec == None):
-        error("Glove does not have \"" + words[start] + "\" in its vocabulary", False);
+        if(v): error("Glove does not have \"" + words[start] + "\" in its vocabulary", False);
         start += 1;
         targetvec = glove.getVec(words[start]);
 
@@ -120,7 +143,8 @@ def getAverageVec(words, glove):
             count += 1;
             targetvec = map(lambda i: targetvec[i] + wordvec[i], xrange(len(targetvec)));
             
-        else: error("Glove does not have \"" + word + "\" in its vocabulary", False);
+        else:
+            if(v): error("Glove does not have \"" + word + "\" in its vocabulary", False);
 
     return map(lambda x: x/count, targetvec);
 
@@ -210,7 +234,7 @@ def findBestVector(targetvec, answers, glove, distfunc, threshold):
 
         # Glove does not have the answer in its vocabulary
         if(vec == None):
-            error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            if(v): error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
             return None;
 
         if( distfunc(vec, targetvec) < mindist and distfunc(vec, targetvec) < threshold ):
@@ -235,7 +259,7 @@ def nearestNeighborModel(targetword, answers, glove, distfunc=cosine, threshold=
 
     # Glove does not have the target word in its vocabulary
     if(targetvec == None):
-        error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
         return None;
 
     return findBestVector(targetvec, answers, glove, distfunc, threshold)
@@ -272,10 +296,8 @@ def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove,
 
     # Try trigrams
     index = -1;
-    try:
-        index = sentence.index(targetword);
-    except:
-        return -1; # Something went wrong
+    try: index = sentence.index(targetword);
+    except: return -1; # Something went wrong
 
     if(index >= 2 and (sentence[index-2], sentence[index-1]) in trigrams):
         prediction = max(set(trigrams[(sentence[index-2], sentence[index-1])]), key=trigrams[(sentence[index-2], sentence[index-1])].count);
@@ -291,15 +313,80 @@ def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove,
     targetvec = glove.getVec(prediction);
     return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
+# Outputs Mathematica readable strings to plot the effectiveness of the parameters
+def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
+    rs,ns,ss,ts,gs = [],[],[],[],[];
+    rp,np,sp,tp,gp = [],[],[],[],[];
 
+    for i in range(1,50):
+        threshold = float(i)/50;
+        print "\n\nExamining threshold: ", threshold
 
-# Loads all passages in file.
-def loadPassages(path):
-    files = getRecursiveFiles(path, lambda x: x[x.rfind("/") + 1] != "." and ".txt" in x and x[-1] != '~' and "norvig" not in x.lower());
-    return [Passage(filename) for filename in files];
+        rand, nn, sent, tfidf, gram = [], [], [], [], [];
+
+        # Loop through all the questions
+        for passage in passages:
+            for question in passage.questions:
+
+                # Find relevant word
+                targetword = re.findall("[\xe2\x80\x9c\u2019\"\']([A-Za-z\s]+)[\xe2\x80\x9c\u2019\"\']", question.text)[0].lower();
+
+                # Tokenize relevant sentence
+                sentence = passage.text.split("\n")[int(re.findall("[0-9]+", question.text)[0]) - 1];
+                sentence = re.split("[^A-Za-z0-9]", sentence);
+                sentence = filter(lambda x: len(x) > 0, sentence);
+                sentence = map(lambda x: x.strip().lower(), sentence);
+
+                # Get correct answer
+                correctAnswer = question.answers[question.correctAnswer];
+
+                # Get answers
+                randAnswer = randomModel(question.answers);
+                nnAnswer = nearestNeighborModel(targetword, question.answers, glove, threshold=threshold);
+                sentAnswer = sentenceModel(sentence, question.answers, glove, threshold=threshold);
+                tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove, threshold=threshold);
+                gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=threshold);
+
+                # Guess the word if we can answer it
+                if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
+                if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
+                if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
+                if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
+                if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
+
+        rs.append( (threshold, rawScore(rand)) );
+        ns.append( (threshold, rawScore(nn)) );
+        ss.append( (threshold, rawScore(sent)) );
+        ts.append( (threshold, rawScore(tfidf)) );
+        gs.append( (threshold, rawScore(gram)) );
+
+        rp.append( (threshold, percentRight(rand)) );
+        np.append( (threshold, percentRight(nn)) );
+        sp.append( (threshold, percentRight(sent)) );
+        tp.append( (threshold, percentRight(tfidf)) );
+        gp.append( (threshold, percentRight(gram)) );
+
+    percent = "ListPlot[{"
+    percent += mathematicatize(rp) + ","
+    percent += mathematicatize(np) + ","
+    percent += mathematicatize(sp) + ","
+    percent += mathematicatize(tp) + ","
+    percent += mathematicatize(gp)
+    percent += "},PlotLegends->{Random,Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based},Filling->Axis]"
+    raw = "ListPlot[{"
+    raw += mathematicatize(rs) + ","
+    raw += mathematicatize(ns) + ","
+    raw += mathematicatize(ss) + ","
+    raw += mathematicatize(ts) + ","
+    raw += mathematicatize(gs)
+    raw += "},PlotLegends->{Random,Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based},Filling->Axis]"
+
+    print percent
+    print raw;
+    sys.exit();
 
 # Main method
-def main(f, o, g, v):
+def main():
     if(v): print "Loading passages...";
     passages = loadPassages(f);
 
@@ -308,6 +395,8 @@ def main(f, o, g, v):
     tfidf_array, allWords = computeTFIDFArray(passages);
     unigrams, bigrams, trigrams = getGrams();
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
+
+    #testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
 
     if(v): print "Running models..."
     # Initialize arrays to keep answers
@@ -368,8 +457,8 @@ if __name__ == "__main__":
     import sys
     import time
 
-    start = time.time();
     args = sys.argv[1:];
+    start = time.time();
 
     v = reduce(lambda a,d: a or d== "-v", args, False);
     if(v): inform("\nImporting modules...")
@@ -389,7 +478,11 @@ if __name__ == "__main__":
 
     # Report error if called the wrong way
     if(f == ""):
-        error("You must use the -f flag to specify where to find that data.\n   1) -v: if you want this program to be verbose\n   2) -o: if you want this program to output results to a file (defaults to printing to console)\n   3) -f: filename or path flag pointing to data (necessary)\n   4) -g: path to glove vector file (defaults to '../data/glove_vectors/glove.6B.50d.txt'", True)
+        error("You must use the -f flag to specify where to find that data.\n" + 
+            "   1) -v: if you want this program to be verbose\n" +
+            "   2) -o: if you want this program to output results to a file (defaults to printing to console)\n" +
+            "   3) -f: filename or path flag pointing to data (necessary)\n" + 
+            "   4) -g: path to glove vector file (defaults to '../data/glove_vectors/glove.6B.50d.txt'", True)
 
 
     # Loading Modules
@@ -411,7 +504,7 @@ if __name__ == "__main__":
     if(v): print "All modules successfully loaded in " + str(int(time.time() - start)) +  " seconds!"
 
     # Main Method
-    main(f, o, g, v);
+    main();
 
     # Finished Testaker execution
     if(v): printSuccess("Program successfully finished and exited in " + str(int(time.time() - start)) +  " seconds!");
