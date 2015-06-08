@@ -335,6 +335,7 @@ def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfu
         return None
     return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
+def wordnetModel():
     # print targetword
     # print sentence
     # print answers[0]
@@ -427,7 +428,7 @@ def main():
 
     if(v): print "Running models..."
     # Initialize arrays to keep answers
-    rand, nn, sent, tfidf, gram, syn = [], [], [], [], [], [];
+    rand, nn, sent, tfidf, gram, syn, wdn = [], [], [], [], [], [], [];
 
     # Loop through all the questions
     for passage in passages:
@@ -453,14 +454,17 @@ def main():
             tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove);
             gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
             synAnswer = synonymModel(targetword, sentence, question.answers, bigrams, trigrams, glove)
+            wdnAnswer = wordnetModel()
 
-    #         # Guess the word if we can answer it
+            # Guess the word if we can answer it
             rand.append( (randAnswer, correctAnswer) );
             nn.append( (nnAnswer, correctAnswer) );
             sent.append( (sentAnswer, correctAnswer) );
             tfidf.append( (tfidfAnswer, correctAnswer) );
             gram.append( (gramAnswer, correctAnswer) );
             syn.append( (synAnswer, correctAnswer) )
+            wdn.append( (wdnAnswer, correctAnswer) )
+
             # if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
             # if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
             # if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
@@ -474,6 +478,7 @@ def main():
     score_model(tfidf, verbose=True, modelname="TFIDF Model");
     score_model(gram, verbose=True, modelname="Gram Model");
     score_model(syn, verbose=True, modelname="Synonym Model")
+    score_model(wdn, verbose=True, modelname="WordNet Model")
 
 
 # =====================================================================================================================================================
