@@ -26,7 +26,7 @@ def score_model(guess_answer_pairs, verbose=False, modelname=""):
         if guess == answer:
             num_correct += 1
             unscaled_score += 1.0
-        elif guess == -1:
+        elif guess == None or guess == -1:
             unscaled_score += 0.0
         else:
             unscaled_score -= 0.25
