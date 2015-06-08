@@ -335,11 +335,32 @@ def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfu
         return None
     return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
-def wordnetModel():
-    # print targetword
-    # print sentence
-    # print answers[0]
-    # print set(synset.name()[:-5] for synset in wn.synsets(answers[0]))
+def wordnetModel(targetword, sentence, answers, glove, distfunc=cosine, threshold=1):
+    target_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(targetword)))
+    target_synonyms.append(targetword)
+    targetvec = glove.getVec(targetword)
+    if len(target_synonyms) > 1:
+        targetvec = getAverageVec(target_synonyms, glove)
+    wordnet_vectors = []
+    for i, answer in enumerate(answers):
+        answer_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(answers[i])))
+        answer_synonyms.append(answer)
+        wn_syn_vector = glove.getVec(answer)
+        if len (answer_synonyms) > 1:
+            wn_syn_vector = getAverageVec(answer_synonyms, glove)
+        wordnet_vectors.append(wn_syn_vector)
+
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
+        return None
+
+    ind, mindist = -1, 10e100;
+    for i, wnv in enumerate(wordnet_vectors):
+        if(wnv == None):
+            continue
+        if( distfunc(wnv, targetvec) < mindist and distfunc(wnv, targetvec) < threshold ):
+            ind, mindist = i, distfunc(wnv, targetvec)
+    return answers[ind];
 
 # Outputs Mathematica readable strings to plot the effectiveness of the parameters
 def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
@@ -454,7 +475,7 @@ def main():
             tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove);
             gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
             synAnswer = synonymModel(targetword, sentence, question.answers, bigrams, trigrams, glove)
-            wdnAnswer = wordnetModel()
+            wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove, threshold=0.3)
 
             # Guess the word if we can answer it
             rand.append( (randAnswer, correctAnswer) );
@@ -471,6 +492,7 @@ def main():
             # if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
             # if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
             # if (synAnswer != None): syn.append( (synAnswer, correctAnswer) )
+            # if (wdnAnswer != None): wdn.append( (wdnAnswer, correctAnswer) )
 
     score_model(rand, verbose=True, modelname="Random Model");
     score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
