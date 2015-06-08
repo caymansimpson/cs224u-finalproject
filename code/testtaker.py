@@ -396,7 +396,7 @@ def main():
     unigrams, bigrams, trigrams = getGrams();
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
 
-    #testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
+    testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages);
 
     if(v): print "Running models..."
     # Initialize arrays to keep answers
