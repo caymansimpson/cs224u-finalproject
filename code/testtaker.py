@@ -313,6 +313,33 @@ def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove,
     targetvec = glove.getVec(prediction);
     return findBestVector(targetvec, answers, glove, distfunc, threshold)
 
+# Replace the target word with each synonym, then check bigram dictionary
+# for commonality, guess accordingly.
+def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
+    guess = -1
+    bestScore = 0
+    for i, answer in enumerate(answers):
+        if targetword in sentence:
+            wordBeforeTarget = sentence[sentence.index(targetword) - 1]
+            bigram_dict = dict(collections.Counter(bigrams[wordBeforeTarget]))
+            score = 0
+            if answer in bigram_dict:
+                score = bigram_dict[answer]
+            if score > bestScore:
+                bestScore = score
+                guess = i
+
+    targetvec = glove.getVec(answers[guess])
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
+        return None
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
+
+    # print targetword
+    # print sentence
+    # print answers[0]
+    # print set(synset.name()[:-5] for synset in wn.synsets(answers[0]))
+
 # Outputs Mathematica readable strings to plot the effectiveness of the parameters
 def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
     rs,ns,ss,ts,gs = [],[],[],[],[];
@@ -400,7 +427,7 @@ def main():
 
     if(v): print "Running models..."
     # Initialize arrays to keep answers
-    rand, nn, sent, tfidf, gram = [], [], [], [], [];
+    rand, nn, sent, tfidf, gram, syn = [], [], [], [], [], [];
 
     # Loop through all the questions
     for passage in passages:
@@ -418,25 +445,35 @@ def main():
             # Get correct answer
             correctAnswer = question.answers[question.correctAnswer];
 
+
             # Get answers
             randAnswer = randomModel(question.answers);
             nnAnswer = nearestNeighborModel(targetword, question.answers, glove);
             sentAnswer = sentenceModel(sentence, question.answers, glove);
             tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove);
             gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
+            synAnswer = synonymModel(targetword, sentence, question.answers, bigrams, trigrams, glove)
 
-            # Guess the word if we can answer it
-            if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
-            if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
-            if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
-            if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
-            if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
+    #         # Guess the word if we can answer it
+            rand.append( (randAnswer, correctAnswer) );
+            nn.append( (nnAnswer, correctAnswer) );
+            sent.append( (sentAnswer, correctAnswer) );
+            tfidf.append( (tfidfAnswer, correctAnswer) );
+            gram.append( (gramAnswer, correctAnswer) );
+            syn.append( (synAnswer, correctAnswer) )
+            # if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
+            # if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
+            # if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
+            # if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
+            # if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
+            # if (synAnswer != None): syn.append( (synAnswer, correctAnswer) )
 
     score_model(rand, verbose=True, modelname="Random Model");
     score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
     score_model(sent, verbose=True, modelname="Sentence-Based Model");
     score_model(tfidf, verbose=True, modelname="TFIDF Model");
     score_model(gram, verbose=True, modelname="Gram Model");
+    score_model(syn, verbose=True, modelname="Synonym Model")
 
 
 # =====================================================================================================================================================
@@ -487,7 +524,9 @@ if __name__ == "__main__":
 
     # Loading Modules
     import scipy
+    from sklearn import svm
     from nltk.tag.stanford import POSTagger
+    from nltk.corpus import wordnet as wn
     from distributedwordreps import *
     import NaiveBayes as nb
     from os import listdir
