@@ -362,6 +362,116 @@ def wordnetModel(targetword, sentence, answers, glove, distfunc=cosine, threshol
             ind, mindist = i, distfunc(wnv, targetvec)
     return answers[ind];
 
+#returns lists of nouns, verbs, and adjectives of sentence
+def getTargetVecs(sentence):
+    nounVec = []
+    verbVec = []
+    adjVec = []
+    for word in sentence:
+        ss = wn.synsets(word)
+        if len(ss) < 1 or word in stopwords.words('english'): continue
+        pos = str(ss[0].pos())
+        if pos == 'n':
+            nounVec.append(word)
+        elif pos == 'v':
+            verbVec.append(word)
+        elif pos == 'a':
+            adjVec.append(word)
+    return nounVec, verbVec, adjVec
+
+
+# Returns cooccurrence counts within sentences
+def cooccurrence(filename="../data/data_passages/norvig.txt"):
+    cooccurCounts = collections.defaultdict(lambda: []);
+
+    #for f in gutenberg.fileids():
+    sentences = readFile(filename).lower().split(".");
+    sentences = map(lambda sentence: re.sub("[^A-Za-z\ \,\'\"]", "", sentence.replace("-"," ")).strip(), sentences);
+    sentences = map(lambda sentence: filter(lambda word: len(word) > 0, re.split("[^A-Za-z]", sentence)), sentences);
+
+    for sentence in sentences:
+        for w1, w2 in itertools.product(sentence, sentence):
+            w1 = w1.lower()
+            w2 = w2.lower()
+            if w1 != w2:
+                    cooccurCounts[w1] += [w2]
+
+    return cooccurCounts
+
+#uses tfidf and coccurrence data to compute an answer vector
+def cooccurrenceModel(targetword, sentence, answers, cooccurrences, glove, distfunc=cosine, threshold=1):
+    guess = -1
+    bestScore = 0
+    target_dict = dict(collections.Counter(cooccurrences[targetword]))
+    targetCount = sum(target_dict.values())
+    n, v, a = getTargetVecs(sentence)
+    topWords = n+v+a
+    for i, answer in enumerate(answers):
+        if targetword in sentence:
+            answer_dict = dict(collections.Counter(cooccurrences[answer]))
+            answerCount = sum(answer_dict.values())
+            score = 0
+
+
+            for w in topWords:
+                if w in answer_dict:
+                    score += (answer_dict[w]/answerCount)
+            if score > bestScore:
+                bestScore = score
+                guess = i
+
+    targetvec = glove.getVec(answers[guess])
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
+        return None
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
+
+def findTopAnalogy(targetvec, answervec, tlist, alist, glove):
+    score = 0
+
+    for w1, w2 in itertools.product(tlist, alist):
+        vec1 = glove.getVec(w1)
+        vec2 = glove.getVec(w2)
+        if vec1 != None and vec2 != None:
+            s = abs( cosine( np.subtract(vec1,vec2), np.subtract(targetvec,answervec) ) )
+
+        if s > score:
+            score = s
+
+    return score
+
+
+#uses the Glove vector analogy equation to compute a score for each answer
+def analogyModel(targetword, sentence, answers, cooccurrences, glove, distfunc=cosine, threshold=1):
+    guess = -1
+    bestScore = 0
+    target_dict = dict(collections.Counter(cooccurrences[targetword]))
+    targetCount = sum(target_dict.values())
+    targetvec = glove.getVec(targetword)
+    n, v, a = getTargetVecs(sentence)
+    for i, answer in enumerate(answers):
+        answervec = glove.getVec(answer)
+        if targetword in sentence and targetvec != None and answervec != None:
+            answer_dict = dict(collections.Counter(cooccurrences[answer]))
+            answerCount = sum(answer_dict.values())
+            answer_set = list(set(cooccurrences[answer]))
+            an, av, aa = getTargetVecs(answer_set)
+            nscore = findTopAnalogy(targetvec, answervec, n, an, glove)
+            vscore = findTopAnalogy(targetvec, answervec, v, av, glove)
+            ascore = findTopAnalogy(targetvec, answervec, a, aa, glove)
+
+            score = max(nscore, vscore, ascore)
+            if score > bestScore:
+                bestScore = score
+                guess = i
+
+    targetvec = glove.getVec(answers[guess])
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
+        return None
+    return findBestVector(targetvec, answers, glove, distfunc, threshold)
+
+
 # Outputs Mathematica readable strings to plot the effectiveness of the parameters
 def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
     rs,ns,ss,ts,gs = [],[],[],[],[];
@@ -444,12 +554,13 @@ def main():
     tfidf_array, allWords = computeTFIDFArray(passages);
     unigrams, bigrams, trigrams = getGrams();
     glove = Glove(g, delimiter=" ", header=False, quoting=csv.QUOTE_NONE);
+    cooccurrences = cooccurrence()
 
     #testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
 
     if(v): print "Running models..."
     # Initialize arrays to keep answers
-    rand, nn, sent, tfidf, gram, syn, wdn = [], [], [], [], [], [], [];
+    rand, nn, sent, tfidf, gram, syn, wdn, cc, an = [], [], [], [], [], [], [], [], [];
 
     # Loop through all the questions
     for passage in passages:
@@ -476,6 +587,9 @@ def main():
             gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
             synAnswer = synonymModel(targetword, sentence, question.answers, bigrams, trigrams, glove)
             wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove, threshold=0.3)
+            ccAnswer = cooccurrenceModel(targetword, sentence, question.answers,cooccurrences, glove)
+            anAnswer = analogyModel(targetword, sentence, question.answers, cooccurrences, glove)
+
 
             # Guess the word if we can answer it
             rand.append( (randAnswer, correctAnswer) );
@@ -485,6 +599,8 @@ def main():
             gram.append( (gramAnswer, correctAnswer) );
             syn.append( (synAnswer, correctAnswer) )
             wdn.append( (wdnAnswer, correctAnswer) )
+            cc.append( (ccAnswer, correctAnswer) )
+            an.append(  (anAnswer, correctAnswer) )
 
             # if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
             # if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
@@ -501,6 +617,8 @@ def main():
     score_model(gram, verbose=True, modelname="Gram Model");
     score_model(syn, verbose=True, modelname="Synonym Model")
     score_model(wdn, verbose=True, modelname="WordNet Model")
+    score_model(cc, verbose=True, modelname="Cooccurrence Model")
+    score_model(an, verbose=True, modelname="Analogy Model")
 
 
 # =====================================================================================================================================================
@@ -554,6 +672,8 @@ if __name__ == "__main__":
     from sklearn import svm
     from nltk.tag.stanford import POSTagger
     from nltk.corpus import wordnet as wn
+    from nltk.corpus import stopwords
+    from nltk.corpus import gutenberg
     from distributedwordreps import *
     import NaiveBayes as nb
     from os import listdir
@@ -566,7 +686,7 @@ if __name__ == "__main__":
     from Question import *
     from Glove import *
     from scoring import score_model
-
+    import numpy as np
     if(v): print "All modules successfully loaded in " + str(int(time.time() - start)) +  " seconds!"
 
     # Main Method
