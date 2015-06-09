@@ -565,9 +565,10 @@ def main():
     print "cc: ", percentWrong(cc);
     print "an: ", percentWrong(an);
 
-    for m1 in [nn, sent, gram, tfidf, syn, wdn, cc, an]:
-        for m2 in [nn, sent, gram, tfidf, syn, wdn, cc, an]:
-            print percentWrong(combineModels(m1, m2)), len(combineModels(m1, m2));
+    names = ["NN","sent","gram","tfidf","syn","wdn","cc","an"]
+    for m1 in zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an]):
+        for m2 in zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an]):
+            print m1[0], m2[0], percentWrong(combineModels(m1[1], m2[1])), len(combineModels(m1[1], m2[1]));
     # score_model(rand, verbose=True, modelname="Random Model");
     # score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
     # score_model(sent, verbose=True, modelname="Sentence-Based Model");
