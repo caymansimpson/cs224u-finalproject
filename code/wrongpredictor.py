@@ -92,12 +92,19 @@ def cosine(u, v):
 # =====================================================================================================================================================
 # =====================================================================================================================================================
 
-def percentRight(arr):
+def combineModels(m1, m2):
+    w = [];
+    for i, tup in enumerate(m1):
+        if(m1[i][0] == m2[i][0]): # Agree on wrong answer
+            w.append(tup);
+    return w;
+
+def percentWrong(arr):
     count = 0.0;
     right = 0.0;
     for tup in arr:
         if(tup[0] == -1 or tup[0] == None): continue;
-        if(tup[0] == tup[1]): right += 1;
+        if(tup[0] != tup[1]): right += 1;
         count += 1;
     return right/count;
 
@@ -242,124 +249,25 @@ def findBestVector(targetvec, answers, glove, distfunc, threshold):
 
     return answers[ind];
 
-#####################################################################################################################
-###################################################### MODELS #######################################################
-#####################################################################################################################
+# Finds the worst answer given a target vector, answers, a distance function and a threshold
+# Returns -1 if none of the answers fall within the threshold
+# Returns None if an answer has a word we don't understand (the question is illegible);
+def findWorstVector(targetvec, answers, glove, distfunc, threshold):
+    ind, mindist = -1, 0;
+    for i,answer in enumerate(answers):
+        vec = glove.getVec(answer);
 
+        # Two word answer, adding the vector
+        if(" " in answer): vec = getSumVec(answer.split(" "), glove);
 
-# Returns answer word based on random chance, given the answers 
-def randomModel(answers):
-    return answers[random.randint(0,len(answers)) - 1];
+        # Glove does not have the answer in its vocabulary
+        if(vec == None):
+            if(v): error("Glove does not have the answer \"" + answer + "\" in its vocabulary", False);
+            return None;
 
-# Returns answer word by taking the nearest neighbor of the ambiguous word in the question
-# Returns None if the target (ambiguous) word or an answer is not in the glove vocab
-# Returns -1 if no answers pass the confidence threshold
-def nearestNeighborModel(targetword, answers, glove, distfunc=cosine, threshold=1):
-    targetvec = glove.getVec(targetword);
+        if( distfunc(vec, targetvec) > mindist and distfunc(vec, targetvec) < threshold ):
+            ind, mindist = i, distfunc(vec, targetvec);
 
-    # Glove does not have the target word in its vocabulary
-    if(targetvec == None):
-        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
-        return None;
-
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
-
-# Sentence is an array of words
-# Returns answer word by averaging the sentence passed in.
-# Returns None if an answer doesn't exist in the glove vocab
-# Returns -1 if no answers pass the confidence threshold
-def sentenceModel(sentence, answers, glove, distfunc=cosine, threshold=1):
-    targetvec = getAverageVec(sentence, glove);
-    ind, mindist = -1, 10e100;
-
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
-
-
-# Sentence is an array of words
-# Returns a chosen answer based on pre-computed tfidf values
-# Returns None if an answer isn't in the glove dictionary
-# Returns -1 if an answer doesn't beat the threshold
-def tfidfModel(sentence, answers, tfidf_array, allWords, glove, distfunc=cosine, threshold=1):
-    topX = findTopX(sentence, tfidf_array, allWords, 15);
-    targetvec = getSumVec(topX, glove);
-
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
-
-
-# Sentence is an array of words
-# Returns a chosen answer based on pre-computed tfidf values
-# Returns None if an answer isn't in the glove dictionary
-# Returns -1 if an answer doesn't beat the threshold
-def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
-
-    prediction = "";
-
-    # Try trigrams
-    index = -1;
-    try: index = sentence.index(targetword);
-    except: return -1; # Something went wrong
-
-    if(index >= 2 and (sentence[index-2], sentence[index-1]) in trigrams):
-        prediction = max(set(trigrams[(sentence[index-2], sentence[index-1])]), key=trigrams[(sentence[index-2], sentence[index-1])].count);
-
-    # Try bigrams
-    elif(index >= 1 and sentence[index-1] in bigrams):
-        prediction = max(set(bigrams[sentence[index-1]]), key=bigrams[sentence[index-1]].count)
-
-    # TODO: Integrate disambiguate function and use most common word
-    else: # Right now: Sends signal that we don't know answer -- we don't answer the question
-        return -1;
-
-    targetvec = glove.getVec(prediction);
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
-
-# Replace the target word with each synonym, then check bigram dictionary
-# for commonality, guess accordingly.
-def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
-    guess = -1
-    bestScore = 0
-    for i, answer in enumerate(answers):
-        if targetword in sentence:
-            wordBeforeTarget = sentence[sentence.index(targetword) - 1]
-            bigram_dict = dict(collections.Counter(bigrams[wordBeforeTarget]))
-            score = 0
-            if answer in bigram_dict:
-                score = bigram_dict[answer]
-            if score > bestScore:
-                bestScore = score
-                guess = i
-
-    targetvec = glove.getVec(answers[guess])
-    if(targetvec == None):
-        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
-        return None
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
-
-def wordnetModel(targetword, sentence, answers, glove, distfunc=cosine, threshold=1):
-    target_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(targetword)))
-    target_synonyms.append(targetword)
-    targetvec = glove.getVec(targetword)
-    if len(target_synonyms) > 1:
-        targetvec = getAverageVec(target_synonyms, glove)
-    wordnet_vectors = []
-    for i, answer in enumerate(answers):
-        answer_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(answers[i])))
-        answer_synonyms.append(answer)
-        wn_syn_vector = glove.getVec(answer)
-        if len (answer_synonyms) > 1:
-            wn_syn_vector = getAverageVec(answer_synonyms, glove)
-        wordnet_vectors.append(wn_syn_vector)
-
-    if(targetvec == None):
-        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
-        return None
-
-    ind, mindist = -1, 10e100;
-    for i, wnv in enumerate(wordnet_vectors):
-        if(wnv == None):
-            continue
-        if( distfunc(wnv, targetvec) < mindist and distfunc(wnv, targetvec) < threshold ):
-            ind, mindist = i, distfunc(wnv, targetvec)
     return answers[ind];
 
 #returns lists of nouns, verbs, and adjectives of sentence
@@ -398,6 +306,126 @@ def cooccurrence(filename="../data/data_passages/norvig.txt"):
 
     return cooccurCounts
 
+#####################################################################################################################
+###################################################### MODELS #######################################################
+#####################################################################################################################
+
+
+# Returns answer word based on random chance, given the answers 
+def randomModel(answers):
+    return answers[random.randint(0,len(answers)) - 1];
+
+# Returns answer word by taking the nearest neighbor of the ambiguous word in the question
+# Returns None if the target (ambiguous) word or an answer is not in the glove vocab
+# Returns -1 if no answers pass the confidence threshold
+def nearestNeighborModel(targetword, answers, glove, distfunc=cosine, threshold=1):
+    targetvec = glove.getVec(targetword);
+
+    # Glove does not have the target word in its vocabulary
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False);
+        return None;
+
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
+
+# Sentence is an array of words
+# Returns answer word by averaging the sentence passed in.
+# Returns None if an answer doesn't exist in the glove vocab
+# Returns -1 if no answers pass the confidence threshold
+def sentenceModel(sentence, answers, glove, distfunc=cosine, threshold=1):
+    targetvec = getAverageVec(sentence, glove);
+    ind, mindist = -1, 10e100;
+
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
+
+
+# Sentence is an array of words
+# Returns a chosen answer based on pre-computed tfidf values
+# Returns None if an answer isn't in the glove dictionary
+# Returns -1 if an answer doesn't beat the threshold
+def tfidfModel(sentence, answers, tfidf_array, allWords, glove, distfunc=cosine, threshold=1):
+    topX = findTopX(sentence, tfidf_array, allWords, 15);
+    targetvec = getSumVec(topX, glove);
+
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
+
+
+# Sentence is an array of words
+# Returns a chosen answer based on pre-computed tfidf values
+# Returns None if an answer isn't in the glove dictionary
+# Returns -1 if an answer doesn't beat the threshold
+def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
+
+    prediction = "";
+
+    # Try trigrams
+    index = -1;
+    try: index = sentence.index(targetword);
+    except: return -1; # Something went wrong
+
+    if(index >= 2 and (sentence[index-2], sentence[index-1]) in trigrams):
+        prediction = max(set(trigrams[(sentence[index-2], sentence[index-1])]), key=trigrams[(sentence[index-2], sentence[index-1])].count);
+
+    # Try bigrams
+    elif(index >= 1 and sentence[index-1] in bigrams):
+        prediction = max(set(bigrams[sentence[index-1]]), key=bigrams[sentence[index-1]].count)
+
+    # TODO: Integrate disambiguate function and use most common word
+    else: # Right now: Sends signal that we don't know answer -- we don't answer the question
+        return -1;
+
+    targetvec = glove.getVec(prediction);
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
+
+# Replace the target word with each synonym, then check bigram dictionary
+# for commonality, guess accordingly.
+def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
+    guess = -1
+    bestScore = 0
+    for i, answer in enumerate(answers):
+        if targetword in sentence:
+            wordBeforeTarget = sentence[sentence.index(targetword) - 1]
+            bigram_dict = dict(collections.Counter(bigrams[wordBeforeTarget]))
+            score = 0
+            if answer in bigram_dict:
+                score = bigram_dict[answer]
+            if score > bestScore:
+                bestScore = score
+                guess = i
+
+    targetvec = glove.getVec(answers[guess])
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
+        return None
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
+
+def wordnetModel(targetword, sentence, answers, glove, distfunc=cosine, threshold=1):
+    target_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(targetword)))
+    target_synonyms.append(targetword)
+    targetvec = glove.getVec(targetword)
+    if len(target_synonyms) > 1:
+        targetvec = getAverageVec(target_synonyms, glove)
+    wordnet_vectors = []
+    for i, answer in enumerate(answers):
+        answer_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(answers[i])))
+        answer_synonyms.append(answer)
+        wn_syn_vector = glove.getVec(answer)
+        if len (answer_synonyms) > 1:
+            wn_syn_vector = getAverageVec(answer_synonyms, glove)
+        wordnet_vectors.append(wn_syn_vector)
+
+    if(targetvec == None):
+        if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
+        return None
+
+    ind, mindist = -1, 10e100;
+    for i, wnv in enumerate(wordnet_vectors):
+        if(wnv == None):
+            continue
+        if( distfunc(wnv, targetvec) < mindist and distfunc(wnv, targetvec) < threshold ):
+            ind, mindist = i, distfunc(wnv, targetvec)
+    return answers[ind];
+
 #uses tfidf and coccurrence data to compute an answer vector
 def cooccurrenceModel(targetword, sentence, answers, cooccurrences, glove, distfunc=cosine, threshold=1):
     guess = -1
@@ -424,7 +452,7 @@ def cooccurrenceModel(targetword, sentence, answers, cooccurrences, glove, distf
     if(targetvec == None):
         if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
         return None
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
 
 def findTopAnalogy(targetvec, answervec, tlist, alist, glove):
     score = 0
@@ -469,80 +497,8 @@ def analogyModel(targetword, sentence, answers, cooccurrences, glove, distfunc=c
     if(targetvec == None):
         if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
         return None
-    return findBestVector(targetvec, answers, glove, distfunc, threshold)
+    return findWorstVector(targetvec, answers, glove, distfunc, threshold)
 
-
-# Outputs Mathematica readable strings to plot the effectiveness of the parameters
-def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
-    rs,ns,ss,ts,gs = [],[],[],[],[];
-    rp,np,sp,tp,gp = [],[],[],[],[];
-
-    for i in range(1,50):
-        threshold = float(i)/50;
-        print "\n\nExamining threshold: ", threshold
-
-        rand, nn, sent, tfidf, gram = [], [], [], [], [];
-
-        # Loop through all the questions
-        for passage in passages:
-            for question in passage.questions:
-
-                # Find relevant word
-                targetword = re.findall("[\xe2\x80\x9c\u2019\"\']([A-Za-z\s]+)[\xe2\x80\x9c\u2019\"\']", question.text)[0].lower();
-
-                # Tokenize relevant sentence
-                sentence = passage.text.split("\n")[int(re.findall("[0-9]+", question.text)[0]) - 1];
-                sentence = re.split("[^A-Za-z0-9]", sentence);
-                sentence = filter(lambda x: len(x) > 0, sentence);
-                sentence = map(lambda x: x.strip().lower(), sentence);
-
-                # Get correct answer
-                correctAnswer = question.answers[question.correctAnswer];
-
-                # Get answers
-                randAnswer = randomModel(question.answers);
-                nnAnswer = nearestNeighborModel(targetword, question.answers, glove, threshold=threshold);
-                sentAnswer = sentenceModel(sentence, question.answers, glove, threshold=threshold);
-                tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove, threshold=threshold);
-                gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=threshold);
-
-                # Guess the word if we can answer it
-                if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
-                if(nnAnswer != None): nn.append( (nnAnswer, correctAnswer) );
-                if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
-                if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
-                if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
-
-        rs.append( (threshold, rawScore(rand)) );
-        ns.append( (threshold, rawScore(nn)) );
-        ss.append( (threshold, rawScore(sent)) );
-        ts.append( (threshold, rawScore(tfidf)) );
-        gs.append( (threshold, rawScore(gram)) );
-
-        rp.append( (threshold, percentRight(rand)) );
-        np.append( (threshold, percentRight(nn)) );
-        sp.append( (threshold, percentRight(sent)) );
-        tp.append( (threshold, percentRight(tfidf)) );
-        gp.append( (threshold, percentRight(gram)) );
-
-    percent = "ListPlot[{"
-    percent += mathematicatize(rp) + ","
-    percent += mathematicatize(np) + ","
-    percent += mathematicatize(sp) + ","
-    percent += mathematicatize(tp) + ","
-    percent += mathematicatize(gp)
-    percent += "},PlotLegends->{Random,Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based},Filling->Axis]"
-    raw = "ListPlot[{"
-    raw += mathematicatize(rs) + ","
-    raw += mathematicatize(ns) + ","
-    raw += mathematicatize(ss) + ","
-    raw += mathematicatize(ts) + ","
-    raw += mathematicatize(gs)
-    raw += "},PlotLegends->{Random,Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based},Filling->Axis]"
-
-    print percent
-    print raw;
-    sys.exit();
 
 # Main method
 def main():
@@ -600,15 +556,27 @@ def main():
             cc.append( (ccAnswer, correctAnswer) )
             an.append(  (anAnswer, correctAnswer) )
 
-    score_model(rand, verbose=True, modelname="Random Model");
-    score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
-    score_model(sent, verbose=True, modelname="Sentence-Based Model");
-    score_model(tfidf, verbose=True, modelname="TFIDF Model");
-    score_model(gram, verbose=True, modelname="Gram Model");
-    score_model(syn, verbose=True, modelname="Synonym Model")
-    score_model(wdn, verbose=True, modelname="WordNet Model")
-    score_model(cc, verbose=True, modelname="Cooccurrence Model")
-    score_model(an, verbose=True, modelname="Analogy Model")
+    print "NN: ", percentWrong(nn);
+    print "Sent: ", percentWrong(sent);
+    print "gram: ", percentWrong(gram);
+    print "tfidf: ", percentWrong(tfidf);
+    print "syn: ", percentWrong(syn);
+    print "wdn: ", percentWrong(wdn);
+    print "cc: ", percentWrong(cc);
+    print "an: ", percentWrong(an);
+
+    for m1 in [nn, sent, gram, tfidf, syn, wdn, cc, an]:
+        for m2 in [nn, sent, gram, tfidf, syn, wdn, cc, an]:
+            print percentWrong(combineModels(m1, m2)), len(combineModels(m1, m2));
+    # score_model(rand, verbose=True, modelname="Random Model");
+    # score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
+    # score_model(sent, verbose=True, modelname="Sentence-Based Model");
+    # score_model(tfidf, verbose=True, modelname="TFIDF Model");
+    # score_model(gram, verbose=True, modelname="Gram Model");
+    # score_model(syn, verbose=True, modelname="Synonym Model")
+    # score_model(wdn, verbose=True, modelname="WordNet Model")
+    # score_model(cc, verbose=True, modelname="Cooccurrence Model")
+    # score_model(an, verbose=True, modelname="Analogy Model")
 
 
 # =====================================================================================================================================================
