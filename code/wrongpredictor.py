@@ -2,7 +2,7 @@
 #!/usr/bin/env python
 # Cayman Simpson (cayman@stanford.edu), Harley Sugarman (harleys@stanford.edu), Angelica Perez (pereza77@stanford.edu)
 # CS224U, Created: 3 May 2015
-# file: testaker.py
+# file: wrongpredictor.py
 
 # =====================================================================================================================================================
 # =====================================================================================================================================================
@@ -566,9 +566,10 @@ def main():
     print "an: ", percentWrong(an);
 
     names = ["NN","sent","gram","tfidf","syn","wdn","cc","an"]
-    for m1 in zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an]):
-        for m2 in zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an]):
-            print m1[0], m2[0], percentWrong(combineModels(m1[1], m2[1])), len(combineModels(m1[1], m2[1]));
+    for i, m1 in enumerate(zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an])):
+        for j, m2 in enumerate(zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an])):
+            if(i > j):
+                print m1[0], m2[0], percentWrong(combineModels(m1[1], m2[1])), len(combineModels(m1[1], m2[1]));
     # score_model(rand, verbose=True, modelname="Random Model");
     # score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
     # score_model(sent, verbose=True, modelname="Sentence-Based Model");
@@ -587,7 +588,7 @@ def main():
 # =====================================================================================================================================================
 
 # Command Line Reference:
-#   Example call: python testaker.py -f "../data/passages" -v -c column_num -o "../output.txt"
+#   Example call: python wrongpredictor.py -f "../data/passages" -v -c column_num -o "../output.txt"
 #   1) -v: if you want this program to be verbose
 #   2) -o: if you want this program to output results to a file (defaults to printing to console)
 #   3) -f: filename or path flag pointing to data (necessary)
@@ -655,48 +656,6 @@ if __name__ == "__main__":
     if(v): printSuccess("Program successfully finished and exited in " + str(int(time.time() - start)) +  " seconds!");
     sys.exit();
 
-# =====================================================================================================================================================
-# =====================================================================================================================================================
-# =================================================================== EXAMPLE CALLS ===================================================================
-# =====================================================================================================================================================
-# =====================================================================================================================================================
-
-
-"""
-Example call of POSTagger:
-======================================================
-tagger = POSTagger(
-        'stanford-postagger/models/french.tagger', 
-        'stanford-postagger/stanford-postagger.jar',
-        'utf-8'
-    );
-
-tagger.tag_sents(array_of_string_sentences);
-
-
-Example call of NaiveBayes:
-======================================================
-classifier = nb.NaiveBayes();
-nb.addExamples(["good","good","ok","bad"],["pos","pos","pos","neg"]);
-print nb.classify("good");
-
-Example call of Passages and Questions
-======================================================
-Passage(filename) <= creates questions and stores them in member
-passage.text = "passage text"
-passage.questions = [Question Object, Question Object]
-
-Question(text) <= constructor, created within Passage constructor, text automatically passed
-Question.text = "question prompt text"
-question.answers = ["answer #0", "answer #1"]
-question.correctAnswer = int_of_correct_answer <= corresponds with index of answers
-
-Example call of Glove Module
-======================================================
-glove = Glove(filename);
-print glove.getVec("and"); # <= prints out glove vector for that word, or None if word not in vocab
-print glove.getVocab(); # <= returns an array of all the words the glove vectors have
-"""
 
 
 
