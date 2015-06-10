@@ -304,6 +304,7 @@ def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove,
 
     # Try bigrams
     elif(index >= 1 and sentence[index-1] in bigrams):
+        if(len(set(bigrams[sentence[index-1]])) == 0): return -1;
         prediction = max(set(bigrams[sentence[index-1]]), key=bigrams[sentence[index-1]].count)
 
     # TODO: Integrate disambiguate function and use most common word
@@ -431,6 +432,7 @@ def cooccurrenceModel(targetword, sentence, answers, cooccurrences, glove, distf
 
 def findTopAnalogy(targetvec, answervec, tlist, alist, glove):
     score = 0
+    s = 0
 
     for w1, w2 in itertools.product(tlist, alist):
         vec1 = glove.getVec(w1)
@@ -476,15 +478,14 @@ def analogyModel(targetword, sentence, answers, cooccurrences, glove, distfunc=c
 
 
 # Outputs Mathematica readable strings to plot the effectiveness of the parameters
-def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages):
-    rs,ns,ss,ts,gs = [],[],[],[],[];
-    rp,np,sp,tp,gp = [],[],[],[],[];
+def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, passages, cooccurrences):
+    rp,np,sp,tp,gp,synp,wp,cp,ap = [],[],[],[],[],[],[],[],[]
 
     for i in range(1,50):
         threshold = float(i)/50;
         print "\n\nExamining threshold: ", threshold
 
-        rand, nn, sent, tfidf, gram = [], [], [], [], [];
+        rand, nn, sent, tfidf, gram, syn, wdn, cc, an = [], [], [], [], [], [], [], [], [];
 
         # Loop through all the questions
         for passage in passages:
@@ -507,7 +508,11 @@ def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, pa
                 nnAnswer = nearestNeighborModel(targetword, question.answers, glove, threshold=threshold);
                 sentAnswer = sentenceModel(sentence, question.answers, glove, threshold=threshold);
                 tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove, threshold=threshold);
-                gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=0.3);
+                gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=threshold);
+                wdnvec, wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove, threshold=threshold)
+                synAnswer = synonymModel(targetword, wdnvec, sentence, question.answers, bigrams, trigrams, glove, threshold=threshold)
+                ccAnswer = cooccurrenceModel(targetword, sentence, question.answers,cooccurrences, glove, threshold=threshold)
+                anAnswer = analogyModel(targetword, sentence, question.answers, cooccurrences, glove, threshold=threshold)
 
                 # Guess the word if we can answer it
                 if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
@@ -515,36 +520,35 @@ def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, pa
                 if(sentAnswer != None): sent.append( (sentAnswer, correctAnswer) );
                 if(tfidfAnswer != None): tfidf.append( (tfidfAnswer, correctAnswer) );
                 if(gramAnswer != None): gram.append( (gramAnswer, correctAnswer) );
-
-        rs.append( (threshold, rawScore(rand)) );
-        ns.append( (threshold, rawScore(nn)) );
-        ss.append( (threshold, rawScore(sent)) );
-        ts.append( (threshold, rawScore(tfidf)) );
-        gs.append( (threshold, rawScore(gram)) );
+                if(wdnAnswer != None): wdn.append( (wdnAnswer, correctAnswer) );
+                if(synAnswer != None): syn.append( (synAnswer, correctAnswer) );
+                if(ccAnswer != None): cc.append( (ccAnswer, correctAnswer) );
+                if(anAnswer != None): an.append( (anAnswer, correctAnswer) );
 
         rp.append( (threshold, percentRight(rand)) );
         np.append( (threshold, percentRight(nn)) );
         sp.append( (threshold, percentRight(sent)) );
         tp.append( (threshold, percentRight(tfidf)) );
         gp.append( (threshold, percentRight(gram)) );
+        synp.append( (threshold, percentRight(syn)) );
+        ap.append( (threshold, percentRight(an)) );
+        wp.append( (threshold, percentRight(wdn)) );
+        cp.append( (threshold, percentRight(cc)) );
 
     percent = "ListPlot[{"
-    percent += mathematicatize(rp) + ","
+    #percent += mathematicatize(rp) + ","
     percent += mathematicatize(np) + ","
     percent += mathematicatize(sp) + ","
     percent += mathematicatize(tp) + ","
-    percent += mathematicatize(gp)
-    percent += "},PlotLegends->{Random,Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based},Filling->Axis]"
-    raw = "ListPlot[{"
-    raw += mathematicatize(rs) + ","
-    raw += mathematicatize(ns) + ","
-    raw += mathematicatize(ss) + ","
-    raw += mathematicatize(ts) + ","
-    raw += mathematicatize(gs)
-    raw += "},PlotLegends->{Random,Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based},Filling->Axis]"
+    percent += mathematicatize(gp) + ","
+    percent += mathematicatize(synp) + ","
+    percent += mathematicatize(ap) + ","
+    percent += mathematicatize(wp) + ","
+    percent += mathematicatize(cp)
+
+    percent += "},PlotLegends->{Nearest Neighbor, Sentence-Based,TFIDF,Gram-Based,Synonym,Analogy,Wordnet,Co-Occurence},Filling->Axis]"
 
     print percent
-    print raw;
     sys.exit();
 
 # Main method
@@ -582,12 +586,12 @@ def main():
 
             # Get answers
             randAnswer = randomModel(question.answers);
-            nnAnswer = nearestNeighborModel(targetword, question.answers, glove);
-            sentAnswer = sentenceModel(sentence, question.answers, glove);
-            tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove);
-            gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
-            wdnvec, wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove)
-            synAnswer = synonymModel(targetword, wdnvec, sentence, question.answers, bigrams, trigrams, glove)
+            nnAnswer = nearestNeighborModel(targetword, question.answers, glove, threshold=.48);
+            sentAnswer = sentenceModel(sentence, question.answers, glove, threshold=.44);
+            tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove, threshold=.44);
+            gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=.42);
+            wdnvec, wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove, threshold=.46)
+            synAnswer = synonymModel(targetword, wdnvec, sentence, question.answers, bigrams, trigrams, glove, threshold=.34)
             ccAnswer = cooccurrenceModel(targetword, sentence, question.answers,cooccurrences, glove)
             anAnswer = analogyModel(targetword, sentence, question.answers, cooccurrences, glove)
 
