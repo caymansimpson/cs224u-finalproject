@@ -565,20 +565,21 @@ def main():
     print "cc: ", percentWrong(cc);
     print "an: ", percentWrong(an);
 
-    names = ["NN","sent","gram","tfidf","syn","wdn","cc","an"]
-    for i, m1 in enumerate(zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an])):
-        for j, m2 in enumerate(zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an])):
-            if(i > j):
-                print m1[0], m2[0], percentWrong(combineModels(m1[1], m2[1])), len(combineModels(m1[1], m2[1]));
-    # score_model(rand, verbose=True, modelname="Random Model");
-    # score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
-    # score_model(sent, verbose=True, modelname="Sentence-Based Model");
-    # score_model(tfidf, verbose=True, modelname="TFIDF Model");
-    # score_model(gram, verbose=True, modelname="Gram Model");
-    # score_model(syn, verbose=True, modelname="Synonym Model")
-    # score_model(wdn, verbose=True, modelname="WordNet Model")
-    # score_model(cc, verbose=True, modelname="Cooccurrence Model")
-    # score_model(an, verbose=True, modelname="Analogy Model")
+    # names = ["NN","sent","gram","tfidf","syn","wdn","cc","an"]
+    # for i, m1 in enumerate(zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an])):
+    #     for j, m2 in enumerate(zip(names, [nn, sent, gram, tfidf, syn, wdn, cc, an])):
+    #         if(i > j):
+    #             print m1[0], m2[0], percentWrong(combineModels(m1[1], m2[1])), len(combineModels(m1[1], m2[1]));
+
+    score_model(rand, verbose=True, modelname="Random Model");
+    score_model(nn, verbose=True, modelname="Nearest Neighbor Model");
+    score_model(sent, verbose=True, modelname="Sentence-Based Model");
+    score_model(tfidf, verbose=True, modelname="TFIDF Model");
+    score_model(gram, verbose=True, modelname="Gram Model");
+    score_model(syn, verbose=True, modelname="Synonym Model")
+    score_model(wdn, verbose=True, modelname="WordNet Model")
+    score_model(cc, verbose=True, modelname="Cooccurrence Model")
+    score_model(an, verbose=True, modelname="Analogy Model")
 
 
 # =====================================================================================================================================================

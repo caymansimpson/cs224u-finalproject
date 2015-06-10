@@ -315,7 +315,7 @@ def gramModel(sentence, answers, targetword, unigrams, bigrams, trigrams, glove,
 
 # Replace the target word with each synonym, then check bigram dictionary
 # for commonality, guess accordingly.
-def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
+def synonymModel(targetword, wntv, sentence, answers, bigrams, trigrams, glove, distfunc=cosine, threshold=1):
     guess = -1
     bestScore = 0
     for i, answer in enumerate(answers):
@@ -329,7 +329,9 @@ def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfu
                 bestScore = score
                 guess = i
 
-    targetvec = glove.getVec(answers[guess])
+    # targetvec = glove.getVec(answers[guess])
+    targetvec = wntv
+
     if(targetvec == None):
         if(v): error("Glove does not have \"" + targetword + "\" in its vocabulary", False)
         return None
@@ -338,6 +340,7 @@ def synonymModel(targetword, sentence, answers, bigrams, trigrams, glove, distfu
 def wordnetModel(targetword, sentence, answers, glove, distfunc=cosine, threshold=1):
     target_synonyms = list(set(synset.name()[:-5] for synset in wn.synsets(targetword)))
     target_synonyms.append(targetword)
+    target_synonyms.extend(sentence)
     targetvec = glove.getVec(targetword)
     if len(target_synonyms) > 1:
         targetvec = getAverageVec(target_synonyms, glove)
@@ -360,7 +363,7 @@ def wordnetModel(targetword, sentence, answers, glove, distfunc=cosine, threshol
             continue
         if( distfunc(wnv, targetvec) < mindist and distfunc(wnv, targetvec) < threshold ):
             ind, mindist = i, distfunc(wnv, targetvec)
-    return answers[ind];
+    return targetvec, answers[ind];
 
 #returns lists of nouns, verbs, and adjectives of sentence
 def getTargetVecs(sentence):
@@ -504,7 +507,7 @@ def testParameters(tfidf_array, allWords, unigrams, bigrams, trigrams, glove, pa
                 nnAnswer = nearestNeighborModel(targetword, question.answers, glove, threshold=threshold);
                 sentAnswer = sentenceModel(sentence, question.answers, glove, threshold=threshold);
                 tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove, threshold=threshold);
-                gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=threshold);
+                gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove, threshold=0.3);
 
                 # Guess the word if we can answer it
                 if(randAnswer != None): rand.append( (randAnswer, correctAnswer) );
@@ -583,8 +586,8 @@ def main():
             sentAnswer = sentenceModel(sentence, question.answers, glove);
             tfidfAnswer = tfidfModel(sentence, question.answers, tfidf_array, allWords, glove);
             gramAnswer = gramModel(sentence, question.answers, targetword, unigrams, bigrams, trigrams, glove);
-            synAnswer = synonymModel(targetword, sentence, question.answers, bigrams, trigrams, glove)
-            wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove, threshold=0.3)
+            wdnvec, wdnAnswer = wordnetModel(targetword, sentence, question.answers, glove)
+            synAnswer = synonymModel(targetword, wdnvec, sentence, question.answers, bigrams, trigrams, glove)
             ccAnswer = cooccurrenceModel(targetword, sentence, question.answers,cooccurrences, glove)
             anAnswer = analogyModel(targetword, sentence, question.answers, cooccurrences, glove)
 
@@ -595,8 +598,8 @@ def main():
             sent.append( (sentAnswer, correctAnswer) );
             tfidf.append( (tfidfAnswer, correctAnswer) );
             gram.append( (gramAnswer, correctAnswer) );
-            syn.append( (synAnswer, correctAnswer) )
             wdn.append( (wdnAnswer, correctAnswer) )
+            syn.append( (synAnswer, correctAnswer) )
             cc.append( (ccAnswer, correctAnswer) )
             an.append(  (anAnswer, correctAnswer) )
 
@@ -605,8 +608,8 @@ def main():
     score_model(sent, verbose=True, modelname="Sentence-Based Model");
     score_model(tfidf, verbose=True, modelname="TFIDF Model");
     score_model(gram, verbose=True, modelname="Gram Model");
-    score_model(syn, verbose=True, modelname="Synonym Model")
     score_model(wdn, verbose=True, modelname="WordNet Model")
+    score_model(syn, verbose=True, modelname="Synonym Model")
     score_model(cc, verbose=True, modelname="Cooccurrence Model")
     score_model(an, verbose=True, modelname="Analogy Model")
 
